@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { LocationForecasts } from './api.ts'
 import { fetchLocations } from './api.ts'
+import { locationKey } from './forecasts.ts'
 import { LocationCard } from './LocationCard.tsx'
+import { LocationDetail } from './LocationDetail.tsx'
 
 /**
  * How often the clock the page renders against moves. It drives both "updated 12 minutes ago"
@@ -24,7 +26,11 @@ function useNow(): Date {
 export default function App() {
   const [locations, setLocations] = useState<LocationForecasts[] | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
+  /* Which Location is open, by coordinate. Deliberately not in the URL: no router, so no deep
+     link and no browser back — the page swaps the grid for the detail in place. */
+  const [openedKey, setOpenedKey] = useState<string | null>(null)
   const now = useNow()
+  const close = useCallback(() => setOpenedKey(null), [])
 
   useEffect(() => {
     const attempt = new AbortController()
@@ -40,23 +46,34 @@ export default function App() {
     return () => attempt.abort()
   }, [])
 
+  const opened = locations?.find((location) => locationKey(location) === openedKey) ?? null
+
   return (
     <div className="page">
       <header className="page__header">
         <h1>Weather Comparison</h1>
         <p className="page__lead">
-          The newest Forecast Snapshot for every Location we track
-          {locations === null ? '' : ` — ${locations.length} of them`}.
+          {opened !== null
+            ? 'Every Forecast in this Location’s newest Snapshot.'
+            : `The newest Forecast Snapshot for every Location we track${
+                locations === null ? '' : ` — ${locations.length} of them`
+              }.`}
         </p>
       </header>
 
       <main>
         {failure !== null && <p className="page__failure">Could not load Locations: {failure}</p>}
         {failure === null && locations === null && <p className="page__loading">Loading Locations…</p>}
-        {locations !== null && (
+        {opened !== null && <LocationDetail location={opened} now={now} onClose={close} />}
+        {locations !== null && opened === null && (
           <div className="grid">
             {locations.map((location) => (
-              <LocationCard key={`${location.latitude},${location.longitude}`} location={location} now={now} />
+              <LocationCard
+                key={locationKey(location)}
+                location={location}
+                now={now}
+                onOpen={() => setOpenedKey(locationKey(location))}
+              />
             ))}
           </div>
         )}

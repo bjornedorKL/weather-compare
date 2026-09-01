@@ -1,6 +1,14 @@
 import type { Forecast, ForecastSnapshot, LocationForecasts } from './api.ts'
 
 /**
+ * A Location is identified by its coordinate (CONTEXT.md) — the name is only a label — so the
+ * coordinate is what the page keys a Location by and what it remembers when one is opened.
+ */
+export function locationKey(location: LocationForecasts): string {
+  return `${location.latitude},${location.longitude}`
+}
+
+/**
  * The Snapshot a card shows. `snapshots` holds one entry per Provider; with a single Provider
  * there is at most one. Comparing Providers is out of scope, so when there are several the card
  * shows the most recently Issued one and names its Provider rather than trying to reconcile them.

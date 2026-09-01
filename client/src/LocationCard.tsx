@@ -21,16 +21,29 @@ const STRIP_LENGTH = 6
 type Props = {
   location: LocationForecasts
   now: Date
+  /** Opens the Location's full timeline. */
+  onOpen: () => void
 }
 
-export function LocationCard({ location, now }: Props) {
+export function LocationCard({ location, now, onOpen }: Props) {
   const snapshot = newestSnapshot(location)
   const current = snapshot === null ? null : currentForecast(snapshot, now)
+  /* A Location no Provider has been asked about has no timeline to open, so it does not offer
+     one; the name stays plain text rather than a control that leads nowhere. */
+  const openable = snapshot !== null && current !== null
 
   return (
-    <article className="card">
+    <article className={`card${openable ? ' card--openable' : ''}`}>
       <header className="card__header">
-        <h2 className="card__name">{location.name}</h2>
+        <h2 className="card__name">
+          {openable ? (
+            <button className="card__open" onClick={onOpen} type="button">
+              {location.name}
+            </button>
+          ) : (
+            location.name
+          )}
+        </h2>
         <p className="card__coordinate">
           {formatCoordinate(location.latitude, location.longitude)} · {location.altitude} m
         </p>

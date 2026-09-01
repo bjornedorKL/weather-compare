@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using WeatherCompare.Api.Locations;
-using WeatherCompare.Api.Providers;
 using WeatherCompare.Api.Storage;
 
 namespace WeatherCompare.Api.Forecasts;
@@ -21,21 +20,20 @@ public sealed class LocationForecastReader(
         payloadReaders.ToDictionary(reader => reader.Provider, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Every Location in the catalogue. Most have never been asked about, and a Location with
+    /// Every Location in the Catalogue. Most have never been asked about, and a Location with
     /// no Snapshot is a Location with no Forecasts — not a failure.
     /// </summary>
     public async Task<IReadOnlyList<LocationForecasts>> ReadAsync(CancellationToken cancellationToken = default)
     {
+        var locations = await catalogue.TrackedAsync(cancellationToken);
         var newest = await NewestSnapshotsAsync(cancellationToken);
 
-        return catalogue.Locations.Select(location => Read(location, newest)).ToList();
+        return locations.Select(location => Read(location, newest)).ToList();
     }
 
-    private LocationForecasts Read(
-        Location location,
-        ILookup<(decimal Latitude, decimal Longitude), ForecastSnapshot> newest)
+    private LocationForecasts Read(Location location, ILookup<long, ForecastSnapshot> newest)
     {
-        var snapshots = newest[Coordinate(location.Latitude, location.Longitude)]
+        var snapshots = newest[location.Id]
             .GroupBy(snapshot => snapshot.Provider, StringComparer.OrdinalIgnoreCase)
             .Select(perProvider => perProvider.MaxBy(snapshot => snapshot.IssuedAt)!)
             .Select(ToForecasts)
@@ -84,29 +82,35 @@ public sealed class LocationForecastReader(
     }
 
     /// <summary>
-    /// The newest Snapshot for every (Provider, Location) pair we hold: the one no later Snapshot
-    /// sits beside. One row per Provider and Location ever asked about, so the whole set is read
-    /// at once rather than a query per Location.
+    /// The newest Snapshot each Provider holds for each Location in the Catalogue, keyed by
+    /// Location. Now that Locations are rows, this is a join: the Catalogue and the Snapshots
+    /// are matched on coordinate in the database, so a Snapshot taken at a coordinate we no
+    /// longer track never leaves it (ADR-0003). Only the newest Snapshots' payloads are read.
     /// </summary>
-    private async Task<ILookup<(decimal Latitude, decimal Longitude), ForecastSnapshot>> NewestSnapshotsAsync(
-        CancellationToken cancellationToken)
+    private async Task<ILookup<long, ForecastSnapshot>> NewestSnapshotsAsync(CancellationToken cancellationToken)
     {
-        var newest = await db.ForecastSnapshots
-            .AsNoTracking()
-            .Where(snapshot => !db.ForecastSnapshots.Any(later =>
-                later.Provider == snapshot.Provider &&
-                later.Latitude == snapshot.Latitude &&
-                later.Longitude == snapshot.Longitude &&
-                later.IssuedAt > snapshot.IssuedAt))
-            .ToListAsync(cancellationToken);
+        var newestPerPair = db.ForecastSnapshots
+            .GroupBy(snapshot => new { snapshot.Provider, snapshot.Latitude, snapshot.Longitude })
+            .Select(pair => new
+            {
+                pair.Key.Provider,
+                pair.Key.Latitude,
+                pair.Key.Longitude,
+                IssuedAt = pair.Max(snapshot => snapshot.IssuedAt),
+            });
 
-        return newest.ToLookup(snapshot => Coordinate(snapshot.Latitude, snapshot.Longitude));
+        var query =
+            from location in catalogue.Tracked
+            join pair in newestPerPair
+                on new { location.Latitude, location.Longitude }
+                equals new { pair.Latitude, pair.Longitude }
+            join snapshot in db.ForecastSnapshots.AsNoTracking()
+                on new { pair.Provider, pair.Latitude, pair.Longitude, pair.IssuedAt }
+                equals new { snapshot.Provider, snapshot.Latitude, snapshot.Longitude, snapshot.IssuedAt }
+            select new { LocationId = location.Id, Snapshot = snapshot };
+
+        var rows = await query.ToListAsync(cancellationToken);
+
+        return rows.ToLookup(row => row.LocationId, row => row.Snapshot);
     }
-
-    /// <summary>
-    /// A Location is its coordinate at the precision the Provider accepts, so Snapshots and
-    /// catalogue entries are matched at that precision and no other.
-    /// </summary>
-    private static (decimal Latitude, decimal Longitude) Coordinate(decimal latitude, decimal longitude) =>
-        (CoordinatePrecision.Truncate(latitude), CoordinatePrecision.Truncate(longitude));
 }

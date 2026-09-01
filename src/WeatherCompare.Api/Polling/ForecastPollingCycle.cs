@@ -8,13 +8,12 @@ using WeatherCompare.Api.Storage;
 namespace WeatherCompare.Api.Polling;
 
 /// <summary>
-/// One sweep of the catalogue: every Provider is asked about every Location, unless the newest
+/// One sweep of the Catalogue: every Provider is asked about every Location we track, unless the newest
 /// Forecast Snapshot we hold for that pair has not Expired yet. Asks are spread out rather than
 /// fired at once, and a Provider or a Location falling over never stops the sweep.
 /// </summary>
 public sealed class ForecastPollingCycle(
     IServiceScopeFactory scopes,
-    LocationCatalogue catalogue,
     IOptions<ForecastPollingOptions> options,
     ILogger<ForecastPollingCycle> logger)
 {
@@ -25,7 +24,7 @@ public sealed class ForecastPollingCycle(
         var tally = new PollingCycleTally();
         var clock = Stopwatch.StartNew();
 
-        foreach (var (providerName, location) in Pairs())
+        foreach (var (providerName, location) in await PairsAsync(cancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -49,9 +48,30 @@ public sealed class ForecastPollingCycle(
         return tally;
     }
 
-    /// <summary>Every (Provider, Location) pair the sweep covers.</summary>
-    private IEnumerable<(string ProviderName, Location Location)> Pairs() =>
-        ProviderNames().SelectMany(_ => catalogue.Locations, (name, location) => (name, location));
+    /// <summary>
+    /// Every (Provider, Location) pair the sweep covers. The Catalogue is read once per cycle,
+    /// from the store, so a Location untracked between cycles stops being asked about — and one
+    /// tracked between cycles starts (ADR-0003).
+    /// </summary>
+    private async Task<IReadOnlyList<(string ProviderName, Location Location)>> PairsAsync(
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return [];
+        }
+
+        // The poller is a singleton and the Catalogue is not, so it is resolved per cycle.
+        await using var scope = scopes.CreateAsyncScope();
+
+        var catalogue = await scope.ServiceProvider
+            .GetRequiredService<LocationCatalogue>()
+            .TrackedAsync(cancellationToken);
+
+        return ProviderNames(scope.ServiceProvider)
+            .SelectMany(_ => catalogue, (name, location) => (name, location))
+            .ToList();
+    }
 
     private async Task RefreshAsync(
         string providerName,
@@ -151,11 +171,8 @@ public sealed class ForecastPollingCycle(
         }
     }
 
-    private IReadOnlyList<string> ProviderNames()
-    {
-        using var scope = scopes.CreateScope();
-        return scope.ServiceProvider.GetServices<IForecastProvider>().Select(p => p.Name).ToList();
-    }
+    private static IReadOnlyList<string> ProviderNames(IServiceProvider services) =>
+        services.GetServices<IForecastProvider>().Select(p => p.Name).ToList();
 
     private static IForecastProvider Provider(IServiceProvider services, string name) =>
         services.GetServices<IForecastProvider>().First(p => p.Name == name);

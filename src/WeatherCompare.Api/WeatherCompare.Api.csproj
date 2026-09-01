@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The hand-written set of Locations we track; read at startup. -->
+    <!-- Seed data: the Locations the Catalogue starts from on first run (ADR-0003). -->
     <Content Update="Locations\locations.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

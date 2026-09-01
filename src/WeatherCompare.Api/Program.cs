@@ -21,8 +21,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 
-    using var scope = app.Services.CreateScope();
-    scope.ServiceProvider.GetRequiredService<WeatherDbContext>().Database.Migrate();
+    await app.Services.MigrateAndSeedAsync();
 }
 
 app.MapGet("/health", async (WeatherDbContext db) =>

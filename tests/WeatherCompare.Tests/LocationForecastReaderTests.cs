@@ -23,6 +23,12 @@ public class LocationForecastReaderTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
 
+    public LocationForecastReaderTests()
+    {
+        _db.Locations.AddRange(LocationSeedFile.Parse(Catalogue));
+        _db.SaveChanges();
+    }
+
     public void Dispose()
     {
         _db.Dispose();
@@ -93,6 +99,22 @@ public class LocationForecastReaderTests : IDisposable
         Assert.All(locations, location => Assert.Empty(location.Snapshots));
     }
 
+    /// <summary>
+    /// Untracking a Location takes it out of the Catalogue and freezes its history; the page
+    /// stops showing it, and the Snapshots it already has stay in the store (ADR-0003).
+    /// </summary>
+    [Fact]
+    public async Task Leaves_an_untracked_location_out_altogether()
+    {
+        Append("MET Norway", 59.9139m, 10.7522m, IssuedAt(11, 46), MetNorwayPayload.SavedOsloSnapshot);
+        Untrack("Oslo");
+
+        var locations = await Reader().ReadAsync();
+
+        Assert.Equal(["Finse"], locations.Select(l => l.Name));
+        Assert.Equal(1, await _db.ForecastSnapshots.CountAsync());
+    }
+
     /// <summary>One unreadable Snapshot must not take the whole page down with it.</summary>
     [Fact]
     public async Task Reads_a_location_whose_newest_snapshot_is_unreadable_as_empty()
@@ -131,10 +153,16 @@ public class LocationForecastReaderTests : IDisposable
         _db.SaveChanges();
     }
 
+    private void Untrack(string name)
+    {
+        _db.Locations.Single(l => l.Name == name).Tracked = false;
+        _db.SaveChanges();
+    }
+
     private LocationForecastReader Reader() =>
         new(
             _db,
-            LocationCatalogue.Parse(Catalogue),
+            new LocationCatalogue(_db),
             [new MetNorwayPayloadReader(Options.Create(new MetNorwayOptions()))],
             NullLogger<LocationForecastReader>.Instance);
 }

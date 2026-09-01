@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+appsettings.Development.json
+appsettings.*.local.json
+
+# Node / React
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Local env
+.env
+.env.local
+
+# Editors / OS
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store

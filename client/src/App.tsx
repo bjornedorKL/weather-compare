@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { LocationForecasts } from './api.ts'
-import { fetchLocations } from './api.ts'
+import { useCatalogue } from './catalogue.ts'
 import { locationKey } from './forecasts.ts'
 import { LocationCard } from './LocationCard.tsx'
 import { LocationDetail } from './LocationDetail.tsx'
+import { TrackLocation } from './TrackLocation.tsx'
 
 /**
  * How often the clock the page renders against moves. It drives both "updated 12 minutes ago"
@@ -24,28 +24,14 @@ function useNow(): Date {
 }
 
 export default function App() {
-  const [locations, setLocations] = useState<LocationForecasts[] | null>(null)
-  const [failure, setFailure] = useState<string | null>(null)
+  const catalogue = useCatalogue()
   /* Which Location is open, by coordinate. Deliberately not in the URL: no router, so no deep
      link and no browser back — the page swaps the grid for the detail in place. */
   const [openedKey, setOpenedKey] = useState<string | null>(null)
   const now = useNow()
   const close = useCallback(() => setOpenedKey(null), [])
 
-  useEffect(() => {
-    const attempt = new AbortController()
-
-    fetchLocations(attempt.signal)
-      .then(setLocations)
-      .catch((error: Error) => {
-        if (error.name !== 'AbortError') {
-          setFailure(error.message)
-        }
-      })
-
-    return () => attempt.abort()
-  }, [])
-
+  const { locations, failure, notice, busy, untracked, fieldProblems } = catalogue
   const opened = locations?.find((location) => locationKey(location) === openedKey) ?? null
 
   return (
@@ -65,16 +51,39 @@ export default function App() {
         {failure !== null && <p className="page__failure">Could not load Locations: {failure}</p>}
         {failure === null && locations === null && <p className="page__loading">Loading Locations…</p>}
         {opened !== null && <LocationDetail location={opened} now={now} onClose={close} />}
+        {opened === null && (
+          <TrackLocation
+            busy={busy}
+            fieldProblems={fieldProblems}
+            onTrackKnown={catalogue.trackKnown}
+            onTrackTyped={catalogue.trackTyped}
+            untracked={untracked}
+          />
+        )}
+        {notice !== null && opened === null && (
+          <p
+            className={`page__notice${notice.tone === 'problem' ? ' page__notice--problem' : ''}`}
+            role="status"
+          >
+            {notice.text}
+          </p>
+        )}
         {locations !== null && opened === null && (
           <div className="grid">
-            {locations.map((location) => (
-              <LocationCard
-                key={locationKey(location)}
-                location={location}
-                now={now}
-                onOpen={() => setOpenedKey(locationKey(location))}
-              />
-            ))}
+            {locations.map((location) => {
+              const id = catalogue.idOf(location)
+
+              return (
+                <LocationCard
+                  busy={busy}
+                  key={locationKey(location)}
+                  location={location}
+                  now={now}
+                  onOpen={() => setOpenedKey(locationKey(location))}
+                  onUntrack={id === null ? null : () => catalogue.untrack(id)}
+                />
+              )
+            })}
           </div>
         )}
       </main>

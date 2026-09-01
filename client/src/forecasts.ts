@@ -2,9 +2,11 @@ import type { Forecast, ForecastSnapshot, LocationForecasts } from './api.ts'
 
 /**
  * A Location is identified by its coordinate (CONTEXT.md) — the name is only a label — so the
- * coordinate is what the page keys a Location by and what it remembers when one is opened.
+ * coordinate is what the page keys a Location by and what it remembers when one is opened. It
+ * takes anything carrying a coordinate, so the same Location read from either endpoint — with
+ * Forecasts, or with its id — keys to the same string and the two can be matched up.
  */
-export function locationKey(location: LocationForecasts): string {
+export function locationKey(location: { latitude: number; longitude: number }): string {
   return `${location.latitude},${location.longitude}`
 }
 

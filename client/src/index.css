@@ -1,3 +1,5 @@
+@import './detail.css';
+
 :root {
   --ink: #17212b;
   --ink-muted: #5b6b7c;

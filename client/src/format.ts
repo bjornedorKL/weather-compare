@@ -18,6 +18,17 @@ const fullMoment = new Intl.DateTimeFormat(undefined, {
   hour12: false,
 })
 
+const dayName = new Intl.DateTimeFormat(undefined, {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
+
+const dayShort = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  day: 'numeric',
+})
+
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
 
 /** Whole degrees. A card is a summary; the tenth of a degree is noise at this size. */
@@ -74,6 +85,32 @@ export function formatClock(moment: Date): string {
 /** `Tue 1 Sep, 14:00`, for the tooltip that spells out which day a strip column belongs to. */
 export function formatMoment(moment: Date): string {
   return fullMoment.format(moment)
+}
+
+/** `Tuesday 1 September` — the heading that delineates one day of the timeline from the next. */
+export function formatDayName(moment: Date): string {
+  return dayName.format(moment)
+}
+
+/** `Tue 1`, for the day marks along a timeline where there is no room for the long form. */
+export function formatDayShort(moment: Date): string {
+  return dayShort.format(moment)
+}
+
+/**
+ * The window a step's precipitation and Symbol describe: `1 h`, `6 h`, or — for the Forecast
+ * that closes a Snapshot — no window at all, which is a fact about the data and not a gap.
+ */
+export function formatWindow(periodHours: number | null): string {
+  return periodHours === null ? 'instant' : `${periodHours} h`
+}
+
+/**
+ * Precipitation as a rate. Only rates may be compared across a range whose window length
+ * changes, so this is what a chart plots and what its axis is labelled in.
+ */
+export function formatIntensity(millimetresPerHour: number): string {
+  return `${millimetresPerHour.toFixed(1).replace(/\.0$/, '')} mm/h`
 }
 
 /**

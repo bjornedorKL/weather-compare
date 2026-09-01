@@ -1,0 +1,112 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using WeatherCompare.Api.Locations;
+using WeatherCompare.Api.Providers;
+using WeatherCompare.Api.Storage;
+
+namespace WeatherCompare.Api.Forecasts;
+
+/// <summary>
+/// The read path: newest Forecast Snapshot per (Provider, Location), decompressed and read into
+/// Forecasts. Normalisation happens here rather than at write time, so a mapping bug is fixed by
+/// changing code and reading the stored Snapshots again (ADR-0001).
+/// </summary>
+public sealed class LocationForecastReader(
+    WeatherDbContext db,
+    LocationCatalogue catalogue,
+    IEnumerable<IForecastPayloadReader> payloadReaders,
+    ILogger<LocationForecastReader> logger)
+{
+    private readonly IReadOnlyDictionary<string, IForecastPayloadReader> _readers =
+        payloadReaders.ToDictionary(reader => reader.Provider, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Every Location in the catalogue. Most have never been asked about, and a Location with
+    /// no Snapshot is a Location with no Forecasts — not a failure.
+    /// </summary>
+    public async Task<IReadOnlyList<LocationForecasts>> ReadAsync(CancellationToken cancellationToken = default)
+    {
+        var newest = await NewestSnapshotsAsync(cancellationToken);
+
+        return catalogue.Locations.Select(location => Read(location, newest)).ToList();
+    }
+
+    private LocationForecasts Read(
+        Location location,
+        ILookup<(decimal Latitude, decimal Longitude), ForecastSnapshot> newest)
+    {
+        var snapshots = newest[Coordinate(location.Latitude, location.Longitude)]
+            .GroupBy(snapshot => snapshot.Provider, StringComparer.OrdinalIgnoreCase)
+            .Select(perProvider => perProvider.MaxBy(snapshot => snapshot.IssuedAt)!)
+            .Select(ToForecasts)
+            .OfType<SnapshotForecasts>()
+            .OrderBy(snapshot => snapshot.Provider, StringComparer.Ordinal)
+            .ToList();
+
+        return new LocationForecasts(
+            location.Name,
+            location.Latitude,
+            location.Longitude,
+            location.Altitude,
+            snapshots);
+    }
+
+    private SnapshotForecasts? ToForecasts(ForecastSnapshot snapshot)
+    {
+        if (!_readers.TryGetValue(snapshot.Provider, out var reader))
+        {
+            logger.LogWarning(
+                "Nothing can read Forecast Snapshots from {Provider}; Snapshot {Snapshot} is not shown",
+                snapshot.Provider,
+                snapshot.Id);
+
+            return null;
+        }
+
+        try
+        {
+            var forecasts = reader.Read(GzipPayload.Decompress(snapshot.Payload));
+
+            return new SnapshotForecasts(snapshot.Provider, snapshot.IssuedAt.ToUniversalTime(), forecasts);
+        }
+        catch (Exception e) when (e is JsonException or InvalidDataException)
+        {
+            // One unreadable Snapshot is not a reason to fail the whole page; the Location shows
+            // as having nothing, and the Snapshot stays in the store to be read again after a fix.
+            logger.LogWarning(
+                e,
+                "Forecast Snapshot {Snapshot} from {Provider} could not be read",
+                snapshot.Id,
+                snapshot.Provider);
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The newest Snapshot for every (Provider, Location) pair we hold: the one no later Snapshot
+    /// sits beside. One row per Provider and Location ever asked about, so the whole set is read
+    /// at once rather than a query per Location.
+    /// </summary>
+    private async Task<ILookup<(decimal Latitude, decimal Longitude), ForecastSnapshot>> NewestSnapshotsAsync(
+        CancellationToken cancellationToken)
+    {
+        var newest = await db.ForecastSnapshots
+            .AsNoTracking()
+            .Where(snapshot => !db.ForecastSnapshots.Any(later =>
+                later.Provider == snapshot.Provider &&
+                later.Latitude == snapshot.Latitude &&
+                later.Longitude == snapshot.Longitude &&
+                later.IssuedAt > snapshot.IssuedAt))
+            .ToListAsync(cancellationToken);
+
+        return newest.ToLookup(snapshot => Coordinate(snapshot.Latitude, snapshot.Longitude));
+    }
+
+    /// <summary>
+    /// A Location is its coordinate at the precision the Provider accepts, so Snapshots and
+    /// catalogue entries are matched at that precision and no other.
+    /// </summary>
+    private static (decimal Latitude, decimal Longitude) Coordinate(decimal latitude, decimal longitude) =>
+        (CoordinatePrecision.Truncate(latitude), CoordinatePrecision.Truncate(longitude));
+}

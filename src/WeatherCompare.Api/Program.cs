@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using WeatherCompare.Api.Forecasts;
 using WeatherCompare.Api.Locations;
 using WeatherCompare.Api.Providers;
 using WeatherCompare.Api.Storage;
@@ -10,6 +11,7 @@ builder.Services.AddLocationCatalogue();
 builder.Services.AddDbContext<WeatherDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("WeatherCompare")));
 builder.Services.AddForecastProviders(builder.Configuration);
+builder.Services.AddForecastReading();
 
 var app = builder.Build();
 
@@ -26,5 +28,7 @@ app.MapGet("/health", async (WeatherDbContext db) =>
     var snapshots = await db.ForecastSnapshots.CountAsync();
     return Results.Ok(new { status = "ok", snapshots });
 });
+
+app.MapForecastEndpoints();
 
 app.Run();

@@ -101,6 +101,24 @@ public class ForecastPollingCycleTests : IDisposable
         Assert.Equal(0, await SnapshotCountAsync());
     }
 
+    /// <summary>
+    /// Untracking a Location stops Providers being asked about it. Sweeping the whole table
+    /// instead of the Catalogue would keep pestering MET about a Location we removed (ADR-0003).
+    /// </summary>
+    [Fact]
+    public async Task Never_asks_about_a_location_that_is_not_tracked()
+    {
+        var provider = new StubForecastProvider("MET Norway", _ => Fetched());
+        _providers.Add(provider);
+        var cycle = Cycle();
+        Untrack("Oslo");
+
+        var tally = await cycle.RunAsync(CancellationToken.None);
+
+        Assert.Equal([(60.3913m, 5.3221m)], provider.Asked);
+        Assert.Equal(1, tally.Appended);
+    }
+
     [Fact]
     public async Task Stops_asking_once_cancelled()
     {
@@ -118,13 +136,14 @@ public class ForecastPollingCycleTests : IDisposable
     private static ForecastFetch Fetched() =>
         ForecastFetch.Fetched(CompactResponse, DateTimeOffset.UtcNow.AddMinutes(30), DateTimeOffset.UtcNow);
 
-    private ForecastPollingCycle Cycle()
+    private ForecastPollingCycle Cycle(string catalogue = TwoLocations)
     {
         var services = new ServiceCollection();
 
         services.AddLogging();
         services.AddDbContext<WeatherDbContext>(o => o.UseInMemoryDatabase(_database));
         services.AddScoped<ForecastSnapshotRecorder>();
+        services.AddScoped<LocationCatalogue>();
 
         foreach (var provider in _providers)
         {
@@ -132,12 +151,28 @@ public class ForecastPollingCycleTests : IDisposable
         }
 
         _services = services.BuildServiceProvider();
+        SeedCatalogue(catalogue);
 
         return new ForecastPollingCycle(
             _services.GetRequiredService<IServiceScopeFactory>(),
-            LocationCatalogue.Parse(TwoLocations),
             Options.Create(new ForecastPollingOptions { Stagger = TimeSpan.Zero }),
             NullLogger<ForecastPollingCycle>.Instance);
+    }
+
+    private void SeedCatalogue(string catalogue)
+    {
+        using var db = Db();
+
+        db.Locations.AddRange(LocationSeedFile.Parse(catalogue));
+        db.SaveChanges();
+    }
+
+    private void Untrack(string name)
+    {
+        using var db = Db();
+
+        db.Locations.Single(l => l.Name == name).Tracked = false;
+        db.SaveChanges();
     }
 
     private WeatherDbContext Db() =>

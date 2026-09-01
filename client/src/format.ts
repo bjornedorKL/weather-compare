@@ -36,6 +36,50 @@ export function formatTemperature(celsius: number | null): string {
   return celsius === null ? '–' : `${Math.round(celsius)}°`
 }
 
+/**
+ * A tenth of a degree, which a card rounds away. Whole degrees hide exactly what a history is
+ * for: a Snapshot that said 19.4° and a later one that said 19.0° both read as `19°`, and the
+ * move disappears.
+ */
+export function formatDegrees(celsius: number | null): string {
+  return celsius === null ? '–' : `${celsius.toFixed(1)}°`
+}
+
+/**
+ * How far a Forecast moved between two Snapshots, signed and with a real minus sign. A move,
+ * not an error: it says the Provider changed its mind, never that it was wrong. Being wrong
+ * would need an Observation, which nothing here has.
+ */
+export function formatDegreeChange(degrees: number): string {
+  if (Math.abs(degrees) < 0.05) {
+    return 'unchanged'
+  }
+
+  return `${degrees > 0 ? '+' : '−'}${Math.abs(degrees).toFixed(1)}°`
+}
+
+/** `51 min`, `2 h 33 min`, `3 d 4 h` — how long a stretch of the record ran, or went missing. */
+export function formatDuration(milliseconds: number): string {
+  const minutes = Math.round(Math.abs(milliseconds) / 60_000)
+
+  if (minutes < 60) {
+    return `${minutes} min`
+  }
+
+  const hours = Math.floor(minutes / 60)
+
+  if (hours < 24) {
+    const rest = minutes % 60
+
+    return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`
+  }
+
+  const days = Math.floor(hours / 24)
+  const rest = hours % 24
+
+  return rest === 0 ? `${days} d` : `${days} d ${rest} h`
+}
+
 /** Millimetres without a trailing `.0`, so 0 reads as `0` and not `0.0`. */
 export function formatMillimetres(millimetres: number): string {
   return millimetres.toFixed(1).replace(/\.0$/, '')

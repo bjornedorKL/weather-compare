@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { LocationForecasts } from './api.ts'
 import { currentForecast, newestSnapshot } from './forecasts.ts'
 import {
@@ -11,6 +11,7 @@ import {
 } from './format.ts'
 import { ForecastChart } from './ForecastChart.tsx'
 import { ForecastDays } from './ForecastDays.tsx'
+import { ForecastHistory } from './ForecastHistory.tsx'
 import { SymbolIcon } from './SymbolIcon.tsx'
 import { symbolLabel } from './symbols.ts'
 import { groupByDay, resolutionChanges } from './timeline.ts'
@@ -23,16 +24,23 @@ import { groupByDay, resolutionChanges } from './timeline.ts'
  * The Snapshot's Issued At is repeated here rather than left behind on the card. A view of ten
  * days of Forecasts is exactly where a reader is most likely to forget that all of it was one
  * Provider's answer at one past moment.
+ *
+ * Picking a step out of the timeline opens what every earlier Snapshot said about that same
+ * moment, in place, between the chart and the steps. That read is what the append-only store
+ * exists for, and it belongs here because the moment is chosen here.
  */
 
 type Props = {
   location: LocationForecasts
+  /** The id the API knows this Location by, which the history read has to name. */
+  locationId: number | null
   now: Date
   onClose: () => void
 }
 
-export function LocationDetail({ location, now, onClose }: Props) {
+export function LocationDetail({ location, locationId, now, onClose }: Props) {
   const back = useRef<HTMLButtonElement>(null)
+  const [moment, setMoment] = useState<string | null>(null)
   const snapshot = newestSnapshot(location)
   const current = snapshot === null ? null : currentForecast(snapshot, now)
 
@@ -42,7 +50,14 @@ export function LocationDetail({ location, now, onClose }: Props) {
 
   useEffect(() => {
     function escape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key !== 'Escape') {
+        return
+      }
+
+      /* One Escape per thing that is open: the history a moment opened, then the Location. */
+      if (moment !== null) {
+        setMoment(null)
+      } else {
         onClose()
       }
     }
@@ -50,7 +65,7 @@ export function LocationDetail({ location, now, onClose }: Props) {
     window.addEventListener('keydown', escape)
 
     return () => window.removeEventListener('keydown', escape)
-  }, [onClose])
+  }, [moment, onClose])
 
   const days = snapshot === null ? [] : groupByDay(snapshot.forecasts)
 
@@ -110,7 +125,16 @@ export function LocationDetail({ location, now, onClose }: Props) {
             now={now}
           />
 
-          <ForecastDays days={days} now={now} />
+          {moment !== null && (
+            <ForecastHistory
+              locationId={locationId}
+              now={now}
+              onClose={() => setMoment(null)}
+              validAt={moment}
+            />
+          )}
+
+          <ForecastDays days={days} now={now} onSelect={setMoment} selected={moment} />
         </>
       )}
     </section>

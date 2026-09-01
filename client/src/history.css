@@ -1,0 +1,284 @@
+/**
+ * What successive Forecast Snapshots said about one moment: the panel a step in the timeline
+ * opens, sitting between the Snapshot chart and the steps themselves.
+ *
+ * The one thing this stylesheet must not do is make an incomplete record look continuous. A gap
+ * is painted as a band with a label in it and left empty; the line stops at its edges.
+ */
+
+.history {
+  --history-height: 7rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--wet);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+.history__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
+.history__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.history__title:focus-visible {
+  outline: 2px solid var(--wet);
+  outline-offset: 3px;
+}
+
+.history__close {
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.history__close:hover {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
+.history__empty,
+.history__failure,
+.history__caveat {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.history__failure {
+  color: var(--accent);
+}
+
+.history__provider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* The headline the whole panel exists for: where the Provider started and where it is now. */
+.history__move {
+  margin: 0;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.history__provider-name {
+  font-weight: 600;
+}
+
+/* ---- The plot: what it said, against when it said it ---- */
+
+.history__chart {
+  margin: 0;
+}
+
+.history__plot {
+  position: relative;
+  height: var(--history-height);
+}
+
+.history__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.history__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.history__axis-line {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* A stretch where a Snapshot was due and none was recorded. Left empty on purpose: there is
+   nothing to draw in there, and drawing the line through it would invent what was never asked. */
+.history__gap {
+  fill: color-mix(in srgb, var(--ink-faint) 22%, transparent);
+}
+
+.history__gap-edge {
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+/* A Snapshot that was recorded and said nothing about this moment — ticked below the axis,
+   where it cannot be mistaken for a reading. */
+.history__silent {
+  stroke: var(--ink-faint);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.history__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* HTML, not SVG: the drawing is stretched to the reader's width, which would squash a circle. */
+.history__dot {
+  position: absolute;
+  width: 0.42rem;
+  height: 0.42rem;
+  margin: -0.21rem 0 0 -0.21rem;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: auto;
+}
+
+.history__gap-label {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: 0.62rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.history__axis {
+  position: absolute;
+  right: 0;
+  padding: 0 0.15rem;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  color: var(--ink-faint);
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.history__axis--high {
+  top: 0;
+}
+
+.history__axis--low {
+  top: calc(var(--history-height) * 0.72);
+}
+
+.history__caption {
+  margin: 0.35rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.7rem;
+}
+
+/* ---- Every answer, in words ---- */
+
+.history__points {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history__point {
+  display: grid;
+  grid-template-columns: 3rem 5.5rem 1.8rem minmax(0, 1fr) 3.4rem 3rem minmax(0, 1.6fr);
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.history__point:nth-child(odd) {
+  background: color-mix(in srgb, var(--line) 28%, transparent);
+}
+
+.history__asked {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.history__age,
+.history__symbol,
+.history__rest {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.history__temperature {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* How far this Snapshot moved from the one before it. A move, never an error: there is no
+   Observation here to be wrong against. */
+.history__drift {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.history__point--silent {
+  grid-template-columns: 3rem minmax(0, 1fr);
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.history__silent-note {
+  font-size: 0.72rem;
+}
+
+/* Given a row of its own so the record is never quietly closed up around it. */
+.history__gap-row {
+  margin: 0.2rem 0;
+  padding: 0.35rem 0.5rem;
+  border-left: 2px solid var(--ink-faint);
+  background: color-mix(in srgb, var(--ink-faint) 10%, transparent);
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 40rem) {
+  .history__point {
+    grid-template-columns: 2.9rem 1.6rem minmax(0, 1fr) 3.2rem 2.8rem;
+  }
+
+  .history__age,
+  .history__rest {
+    display: none;
+  }
+
+  .history .symbol--small {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+}

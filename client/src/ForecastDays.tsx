@@ -23,14 +23,21 @@ import { resolutionChanges, stepEnd, summariseDay } from './timeline.ts'
  * range and `2.8 mm` means nothing without knowing whether it fell in an hour or in six. The
  * step that closes a Snapshot describes no window at all: it is an instant with a temperature
  * and a wind, and says so rather than showing a zero it was never given.
+ *
+ * A step is also the way into its own history. Picking one asks what every earlier Snapshot said
+ * about that same moment — the entry point is here, in the timeline the reader is already
+ * reading, rather than a screen of its own with a date picker on it.
  */
 
 type Props = {
   days: ForecastDay[]
   now: Date
+  /** The moment whose history is open, as the Forecast spelled it. */
+  selected: string | null
+  onSelect: (validAt: string) => void
 }
 
-export function ForecastDays({ days, now }: Props) {
+export function ForecastDays({ days, now, selected, onSelect }: Props) {
   /* The steps where the Provider's window lengthens. Called out in the rows as well as in the
      chart, because that is the row where the millimetres above and below stop being comparable. */
   const rewindowed = new Map(
@@ -63,7 +70,12 @@ export function ForecastDays({ days, now }: Props) {
                       figure below covers {change.toHours} hours, not {change.fromHours}.
                     </li>
                   )}
-                  <Step now={now} step={step} />
+                  <Step
+                    now={now}
+                    onSelect={() => onSelect(step.validAt)}
+                    selected={step.validAt === selected}
+                    step={step}
+                  />
                 </Fragment>
               )
             })}
@@ -74,7 +86,14 @@ export function ForecastDays({ days, now }: Props) {
   )
 }
 
-function Step({ step, now }: { step: Forecast; now: Date }) {
+type StepProps = {
+  step: Forecast
+  now: Date
+  selected: boolean
+  onSelect: () => void
+}
+
+function Step({ step, now, selected, onSelect }: StepProps) {
   const end = stepEnd(step)
   const past = end !== null ? end <= now : Date.parse(step.validAt) <= now.getTime()
   /* The direction is the arrow beside it, so the row prints the speed alone; the row's title
@@ -82,10 +101,23 @@ function Step({ step, now }: { step: Forecast; now: Date }) {
   const wind = formatWind(step.windSpeedMetresPerSecond, null)
 
   return (
-    <li className={`step${past ? ' step--past' : ''}`} title={describeStep(step)}>
-      <time className="step__clock" dateTime={step.validAt}>
-        {formatClock(new Date(step.validAt))}
-      </time>
+    <li
+      className={`step${past ? ' step--past' : ''}${selected ? ' step--selected' : ''}`}
+      title={describeStep(step)}
+    >
+      {/* The clock is the control, stretched over the whole row by its own ::after, so a step is
+          opened from anywhere along it — one real button, which the keyboard gets for free. */}
+      <button
+        aria-label={`What successive Snapshots said about ${formatMoment(new Date(step.validAt))}`}
+        aria-pressed={selected}
+        className="step__open"
+        onClick={onSelect}
+        type="button"
+      >
+        <time className="step__clock" dateTime={step.validAt}>
+          {formatClock(new Date(step.validAt))}
+        </time>
+      </button>
       <span className="step__window">{formatWindow(step.periodHours)}</span>
       <SymbolIcon symbol={step.symbol} size="small" />
       <span className="step__symbol">{symbolLabel(step.symbol) ?? 'No Symbol'}</span>

@@ -40,7 +40,7 @@ export default function App() {
         <h1>Weather Comparison</h1>
         <p className="page__lead">
           {opened !== null
-            ? 'Every Forecast in this Location’s newest Snapshot.'
+            ? 'Every Forecast in this Location’s newest Snapshot. Pick a step to see what successive Snapshots said about that moment.'
             : `The newest Forecast Snapshot for every Location we track${
                 locations === null ? '' : ` — ${locations.length} of them`
               }.`}
@@ -50,7 +50,14 @@ export default function App() {
       <main>
         {failure !== null && <p className="page__failure">Could not load Locations: {failure}</p>}
         {failure === null && locations === null && <p className="page__loading">Loading Locations…</p>}
-        {opened !== null && <LocationDetail location={opened} now={now} onClose={close} />}
+        {opened !== null && (
+          <LocationDetail
+            location={opened}
+            locationId={catalogue.idOf(opened)}
+            now={now}
+            onClose={close}
+          />
+        )}
         {opened === null && (
           <TrackLocation
             busy={busy}

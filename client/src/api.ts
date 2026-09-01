@@ -44,3 +44,125 @@ export async function fetchLocations(signal?: AbortSignal): Promise<LocationFore
 
   return (await response.json()) as LocationForecasts[]
 }
+
+/**
+ * A Location we know, tracked or not — what `GET /api/locations/known` returns. `id` is how the
+ * page names a Location when tracking or untracking it, so it never has to spell the coordinate
+ * out; identity is still the coordinate, and this is only a handle onto it.
+ */
+export type KnownLocation = {
+  id: number
+  name: string
+  latitude: number
+  longitude: number
+  altitude: number
+  /** Whether it is in the Catalogue right now. Untracked ones are still known, and still here. */
+  tracked: boolean
+}
+
+/** A Location as someone types it: nulls where a field was left empty, for the API to reject. */
+export type TypedLocation = {
+  name: string
+  latitude: number | null
+  longitude: number | null
+  altitude: number | null
+}
+
+/**
+ * The Location the Catalogue now holds, and whether tracking it added a row. `created` is false
+ * when that coordinate was already known — under the typed name or a different one.
+ */
+export type TrackedCoordinate = {
+  location: KnownLocation
+  created: boolean
+}
+
+type ProblemDetails = {
+  title?: string
+  detail?: string
+  errors?: Record<string, string[]>
+}
+
+/**
+ * A write the API turned down, in the API's own words. A 400 names the offending fields and a
+ * 404 explains the id; either way the page repeats what it was told rather than guessing at a
+ * wording of its own, which would drift from what the API actually enforces.
+ */
+export class WriteRefused extends Error {
+  /** Field name as the API spelled it (`Latitude`) to its first message, for use beside inputs. */
+  readonly fields: Readonly<Record<string, string>>
+
+  constructor(message: string, fields: Record<string, string>) {
+    super(message)
+    this.name = 'WriteRefused'
+    this.fields = fields
+  }
+}
+
+async function refusal(response: Response): Promise<WriteRefused> {
+  let problem: ProblemDetails = {}
+
+  try {
+    problem = (await response.json()) as ProblemDetails
+  } catch {
+    /* Not problem+json. The status line below is then all we can honestly report. */
+  }
+
+  const fields: Record<string, string> = {}
+
+  for (const [field, messages] of Object.entries(problem.errors ?? {})) {
+    if (messages.length > 0) {
+      fields[field] = messages[0]
+    }
+  }
+
+  const spelled = Object.values(fields)
+  const said = spelled.length > 0 ? [problem.title, ...spelled] : [problem.title, problem.detail]
+  const message = said.filter((part) => part !== undefined).join(' ')
+
+  return new WriteRefused(message === '' ? `The API answered ${response.status}.` : message, fields)
+}
+
+export async function fetchKnownLocations(signal?: AbortSignal): Promise<KnownLocation[]> {
+  const response = await fetch('/api/locations/known', { signal })
+
+  if (!response.ok) {
+    throw new Error(`GET /api/locations/known answered ${response.status}`)
+  }
+
+  return (await response.json()) as KnownLocation[]
+}
+
+/**
+ * Puts a Location we already know into the Catalogue, or takes it out. Untracking stops future
+ * Forecast Snapshots; it deletes nothing, and the Location stays known so this can be undone.
+ */
+export async function setTracked(id: number, tracked: boolean): Promise<KnownLocation> {
+  const response = await fetch(`/api/locations/${id}/${tracked ? 'track' : 'untrack'}`, {
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw await refusal(response)
+  }
+
+  return (await response.json()) as KnownLocation
+}
+
+/** Tracks a typed coordinate. 201 means the coordinate was new, 200 that we already knew it. */
+export async function trackCoordinate(typed: TypedLocation): Promise<TrackedCoordinate> {
+  const response = await fetch('/api/locations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(typed),
+  })
+
+  if (!response.ok) {
+    throw await refusal(response)
+  }
+
+  return {
+    location: (await response.json()) as KnownLocation,
+    created: response.status === 201,
+  }
+}

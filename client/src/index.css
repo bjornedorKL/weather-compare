@@ -1,4 +1,5 @@
 @import './detail.css';
+@import './track.css';
 
 :root {
   --ink: #17212b;
@@ -70,6 +71,24 @@ a {
   color: var(--accent);
 }
 
+/* What the last write did, said in full. Untracking is easy to read as deleting, so there is
+   room here for the sentence that says it is not. */
+.page__notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--wet);
+  border-radius: 0.4rem;
+  background: var(--card);
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.page__notice--problem {
+  border-left-color: var(--accent);
+  color: var(--accent);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
@@ -88,10 +107,21 @@ a {
   background: var(--card);
 }
 
+/* The name and coordinate on the left, the control that stops tracking on the right. They wrap
+   onto two lines rather than squeezing the name when a card is narrow. */
 .card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+}
+
+.card__heading {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+  min-width: 0;
 }
 
 .card__name {

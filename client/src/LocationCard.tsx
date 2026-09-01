@@ -23,9 +23,16 @@ type Props = {
   now: Date
   /** Opens the Location's full timeline. */
   onOpen: () => void
+  /**
+   * Takes this Location out of the Catalogue. Null when the page cannot name it to the API —
+   * the two reads disagreed — in which case the card simply offers no such control.
+   */
+  onUntrack: (() => void) | null
+  /** A write is already in flight, so the controls stand down until it lands. */
+  busy: boolean
 }
 
-export function LocationCard({ location, now, onOpen }: Props) {
+export function LocationCard({ location, now, onOpen, onUntrack, busy }: Props) {
   const snapshot = newestSnapshot(location)
   const current = snapshot === null ? null : currentForecast(snapshot, now)
   /* A Location no Provider has been asked about has no timeline to open, so it does not offer
@@ -35,18 +42,35 @@ export function LocationCard({ location, now, onOpen }: Props) {
   return (
     <article className={`card${openable ? ' card--openable' : ''}`}>
       <header className="card__header">
-        <h2 className="card__name">
-          {openable ? (
-            <button className="card__open" onClick={onOpen} type="button">
-              {location.name}
-            </button>
-          ) : (
-            location.name
-          )}
-        </h2>
-        <p className="card__coordinate">
-          {formatCoordinate(location.latitude, location.longitude)} · {location.altitude} m
-        </p>
+        <div className="card__heading">
+          <h2 className="card__name">
+            {openable ? (
+              <button className="card__open" onClick={onOpen} type="button">
+                {location.name}
+              </button>
+            ) : (
+              location.name
+            )}
+          </h2>
+          <p className="card__coordinate">
+            {formatCoordinate(location.latitude, location.longitude)} · {location.altitude} m
+          </p>
+        </div>
+
+        {/* Sits above the stretched hit area that opens the Location, so the two do not fight:
+            the card is one big click target and this is the hole punched in it. */}
+        {onUntrack !== null && (
+          <button
+            aria-label={`Stop tracking ${location.name}`}
+            className="card__untrack"
+            disabled={busy}
+            onClick={onUntrack}
+            title="Stops new Forecast Snapshots. Every Snapshot already recorded is kept."
+            type="button"
+          >
+            Stop tracking
+          </button>
+        )}
       </header>
 
       {snapshot === null || current === null ? (

@@ -1,0 +1,190 @@
+/**
+ * Joining and leaving the Catalogue: the control on a card that stops tracking a Location, and
+ * the panel above the grid that puts one back or describes a new coordinate. Split out of
+ * index.css the same way detail.css was — one concern, read on its own.
+ */
+
+/* ---- Stopping tracking, from a card ---- */
+
+/* The card is one big click target: `.card__open::after` stretches over it at z-index 1. This
+   is the hole punched in that surface, so a click here stops tracking instead of opening the
+   Location. Nothing else on a card needs to escape it, and a hover outline says which is which. */
+.card__untrack {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.card__untrack:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.card__untrack:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- The panel that tracks one ---- */
+
+.track {
+  margin-bottom: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+.track__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.track__count {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--wet) 18%, transparent);
+  color: var(--wet);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.track__section {
+  padding: 0 0.9rem 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.track__heading {
+  margin: 0.8rem 0 0.2rem;
+  font-size: 0.9rem;
+}
+
+.track__note {
+  margin: 0 0 0.6rem;
+  max-width: 46rem;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.track__known {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.track__again {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.track__again:hover:not(:disabled) {
+  border-color: var(--wet);
+}
+
+.track__again:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.track__again-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.track__again-coordinate {
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Describing a coordinate ---- */
+
+/* Wide enough for four fields side by side on a laptop, one per line on a phone. */
+.track__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: start;
+  gap: 0.6rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.field__label {
+  color: var(--ink-muted);
+}
+
+.field__input {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: var(--ground);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.field__input:focus-visible {
+  outline: 2px solid var(--wet);
+  outline-offset: 1px;
+}
+
+.field__problem {
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.track__submit {
+  align-self: end;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--wet);
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--wet);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.track__submit:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--wet) 12%, transparent);
+}
+
+.track__submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

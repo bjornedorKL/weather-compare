@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using WeatherCompare.Api.Locations;
 using WeatherCompare.Api.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddLocationCatalogue();
 builder.Services.AddDbContext<WeatherDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("WeatherCompare")));
 

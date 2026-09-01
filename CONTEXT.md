@@ -12,6 +12,10 @@ _Avoid_: API, service, source, backend
 A point on earth we track weather for, identified by its coordinate at the precision the Provider accepts. Its name is a human label we attach for display — two Locations with the same coordinate are the same Location regardless of what they are called.
 _Avoid_: place, city, station, position
 
+**Catalogue**:
+The set of **Locations** we currently track. A Location enters it when tracked and leaves when untracked. Untracking stops Providers being asked about that Location and freezes its history; it never removes **Forecast Snapshots** already recorded, and the Location remains known, so it can be tracked again without being described afresh.
+_Avoid_: list, places, watchlist, subscriptions
+
 **Forecast**:
 A statement about what the weather will be at a **Location** at some future moment. A Provider issues many Forecasts at once, covering a range of future moments.
 _Avoid_: prediction, weather data
@@ -39,6 +43,10 @@ _Avoid_: timestamp, created, date
 **Canonical vocabulary is one Provider's** — **Symbol** uses MET Norway's names for every Provider. A deliberate shortcut, not a principle (see ADR-0002). If a Provider's conditions will not map into MET's set, that is the trigger to introduce a neutral vocabulary.
 
 **History has gaps** — the poller runs locally, so Snapshots exist only for periods when the machine was awake. Gaps cannot be backfilled: a Provider can never be asked what it said last Tuesday. Any comparison across Providers is a comparison over an incomplete record, and must not be read as continuous.
+
+**Removing is untracking, not deleting** — taking a Location out of the **Catalogue** stops future Snapshots being recorded for it. Every Snapshot already recorded survives, permanently and by construction: the store rejects deletes outright. A Location tracked again later resumes with an unbackfillable gap in the middle of its history.
+
+**Card** — not a domain term. A card is how the page draws a **Location**; there is no such thing as adding, removing or clicking a Card in the domain. Say Location.
 
 ## Example dialogue
 

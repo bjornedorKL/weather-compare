@@ -1,9 +1,281 @@
 :root {
-  font-family: system-ui, sans-serif;
+  --ink: #17212b;
+  --ink-muted: #5b6b7c;
+  --ink-faint: #8a99a8;
+  --ground: #eef2f6;
+  --card: #ffffff;
+  --line: #dbe3ea;
+  --wet: #1a6fb5;
+  --accent: #b23c17;
+
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   line-height: 1.5;
+  color: var(--ink);
+  background: var(--ground);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e7edf3;
+    --ink-muted: #9fb0c0;
+    --ink-faint: #74869a;
+    --ground: #12181f;
+    --card: #1b232c;
+    --line: #2b3742;
+    --wet: #6fb6ef;
+    --accent: #e8875f;
+  }
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  padding: 2rem;
+}
+
+a {
+  color: inherit;
+}
+
+.page {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.page__header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+}
+
+.page__lead {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+.page__loading,
+.page__failure {
+  padding: 2rem 0;
+  color: var(--ink-muted);
+}
+
+.page__failure {
+  color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 1rem;
+}
+
+/* ---- A Location's card ---- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+.card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.card__name {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.card__coordinate {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.card__empty {
+  margin: 0;
+  padding: 1.25rem 0;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.card__issued {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+}
+
+/* ---- What it is doing now ---- */
+
+.now {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.now__reading {
+  min-width: 0;
+}
+
+.now__temperature {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.now__symbol {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+}
+
+.measures {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.82rem;
+}
+
+.measures__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.measures dt {
+  color: var(--ink-muted);
+}
+
+.measures dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The hours ahead ---- */
+
+.strip {
+  display: flex;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.5rem 0 0;
+  list-style: none;
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+/* The columns share the card's width rather than overflowing it, so nothing is half-cut. */
+.strip__step {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.25rem 0.1rem;
+  border-radius: 0.4rem;
+}
+
+.strip__step:nth-child(odd) {
+  background: color-mix(in srgb, var(--line) 35%, transparent);
+}
+
+.strip__clock {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.strip__period {
+  font-size: 0.6rem;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.strip__temperature {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.strip__precipitation {
+  font-size: 0.62rem;
+  color: var(--wet);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Symbols ---- */
+
+.symbol {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.symbol--large {
+  width: 3.75rem;
+  height: 3.75rem;
+}
+
+.symbol--small {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.symbol--absent {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 50%;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.symbol--absent.symbol--small {
+  font-size: 0.7rem;
+}
+
+/* ---- Attribution: required by MET's terms, not decoration ---- */
+
+.page__attribution {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+}
+
+.page__attribution p {
+  margin: 0 0 0.35rem;
+}
+
+@media (max-width: 25rem) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page {
+    padding: 1rem 0.75rem 2rem;
+  }
 }

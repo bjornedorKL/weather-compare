@@ -11,8 +11,10 @@ Running locally. The backend polls, stores and serves; the page renders.
 
 - A card per tracked Location, click through to the full forecast timeline.
 - Locations are tracked and untracked from the page; the Catalogue lives in Postgres.
+- A Location can be found by name: searching offers **Matches**, and picking one fills the
+  track form. Typing a coordinate by hand still works, and is the route that needs no network.
 - Snapshot history shows how the forecast for a given hour moved between Snapshots.
-- 96 tests. CI builds and tests the API and the client on every push and pull request.
+- 105 tests. CI builds and tests the API and the client on every push and pull request.
 
 MET Norway is still the only Provider, so nothing is compared against anything yet.
 
@@ -35,3 +37,7 @@ MET Norway is still the only Provider, so nothing is compared against anything y
 
 Weather data from [MET Norway](https://api.met.no/), licensed
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) / [NLOD](https://data.norge.no/nlod/en/2.0).
+
+Location search by [Open-Meteo](https://open-meteo.com/en/docs/geocoding-api), over the
+[GeoNames](https://www.geonames.org/) gazetteer — both licensed
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

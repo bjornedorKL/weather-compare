@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddLocationCatalogue();
 builder.Services.AddLocationTracking();
+builder.Services.AddLocationSearch(builder.Configuration);
 builder.Services.AddDbContext<WeatherDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("WeatherCompare")));
 builder.Services.AddForecastProviders(builder.Configuration);

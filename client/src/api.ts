@@ -219,3 +219,27 @@ export async function renameLocation(id: number, name: string): Promise<KnownLoc
 
   return (await response.json()) as KnownLocation
 }
+
+/**
+ * Metres above sea level at a coordinate — what `GET /api/locations/elevation` returns, from
+ * Open-Meteo's elevation model through our own API. This is the altitude for a Location the
+ * browser located, because the altitude the browser itself offers is height above the WGS84
+ * ellipsoid: tens of metres out, and null on any device positioning by wi-fi (ADR-0004).
+ *
+ * A throw is a lookup that could not run. It is deliberately not fatal to anything: the altitude
+ * is a form field, so it can still be typed, and tracking is unaffected.
+ */
+export async function lookUpElevation(
+  latitude: number,
+  longitude: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  const where = `latitude=${latitude}&longitude=${longitude}`
+  const response = await fetch(`/api/locations/elevation?${where}`, { signal })
+
+  if (!response.ok) {
+    throw new Error((await refusal(response)).message)
+  }
+
+  return ((await response.json()) as { elevation: number }).elevation
+}

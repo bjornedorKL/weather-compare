@@ -192,6 +192,19 @@
   font-size: 0.68rem;
 }
 
+/* ---- Asking the browser where you are ---- */
+
+/* One button and, once pressed, one sentence under it: how far out the fix is and what the
+   elevation model made of it. Both belong to the button rather than to the form below, which is
+   why they are wrapped rather than dropped into the section. */
+.track__locate {
+  margin-bottom: 0.8rem;
+}
+
+.track__locate .track__note {
+  margin: 0.4rem 0 0;
+}
+
 /* ---- Describing a coordinate ---- */
 
 /* Wide enough for four fields side by side on a laptop, one per line on a phone. */

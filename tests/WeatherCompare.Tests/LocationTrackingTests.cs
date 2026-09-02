@@ -162,6 +162,102 @@ public class LocationTrackingTests : IDisposable
         Assert.Null(await Tracking.SetTrackedAsync(4242, tracked));
     }
 
+    /* ---- Renaming ---- */
+
+    /// <summary>
+    /// A rename changes the label and nothing else. The coordinate is what identifies a Location,
+    /// so the row that comes back is the same Location it was before (CONTEXT.md).
+    /// </summary>
+    [Fact]
+    public async Task Renaming_changes_the_label_and_nothing_else()
+    {
+        var location = (await TrackAsync("Oslo", 59.9139m, 10.7522m, 23)).Location;
+
+        var renamed = await Tracking.RenameAsync(location.Id, "Oslo sentrum");
+
+        Assert.Equal("Oslo sentrum", renamed!.Name);
+        Assert.Equal(location.Id, renamed.Id);
+        Assert.Equal(location.Coordinate, renamed.Coordinate);
+        Assert.Equal(23, renamed.Altitude);
+        Assert.True(renamed.Tracked);
+        Assert.Equal(1, await _db.Locations.CountAsync());
+    }
+
+    /// <summary>
+    /// A Forecast Snapshot stores a coordinate and no name, so a rename cannot reach history even
+    /// in principle. Asserted rather than assumed, because it is what makes renaming safe.
+    /// </summary>
+    [Fact]
+    public async Task Renaming_touches_no_snapshot()
+    {
+        var location = (await TrackAsync("Oslo", 59.9139m, 10.7522m, 23)).Location;
+        AppendSnapshot(location);
+        AppendSnapshot(location);
+
+        await Tracking.RenameAsync(location.Id, "Home");
+
+        Assert.Equal(2, await _db.ForecastSnapshots.CountAsync());
+        Assert.All(
+            _db.ForecastSnapshots,
+            snapshot => Assert.Equal(location.Coordinate, (snapshot.Latitude, snapshot.Longitude)));
+    }
+
+    /// <summary>An untracked Location shows on the page as one we know, so it is renamed too.</summary>
+    [Fact]
+    public async Task Renaming_an_untracked_location_leaves_it_untracked()
+    {
+        var location = (await TrackAsync("Oslo", 59.9139m, 10.7522m, 23)).Location;
+        await Tracking.SetTrackedAsync(location.Id, tracked: false);
+
+        var renamed = await Tracking.RenameAsync(location.Id, "Oslo, one day");
+
+        Assert.Equal("Oslo, one day", renamed!.Name);
+        Assert.False(renamed.Tracked);
+        Assert.Empty(await new LocationCatalogue(_db).TrackedAsync());
+    }
+
+    /// <summary>
+    /// Two Locations may both be "Home". Refusing that would make the name part of a Location's
+    /// identity, which is exactly what CONTEXT.md says it is not; the coordinate keeps them apart.
+    /// </summary>
+    [Fact]
+    public async Task Two_locations_are_allowed_to_share_a_name()
+    {
+        var first = (await TrackAsync("Oslo", 59.9139m, 10.7522m, 23)).Location;
+        var second = (await TrackAsync("Bergen", 60.3913m, 5.3221m, 44)).Location;
+
+        await Tracking.RenameAsync(first.Id, "Home");
+        var renamed = await Tracking.RenameAsync(second.Id, "Home");
+
+        Assert.Equal("Home", renamed!.Name);
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.Equal(2, await _db.Locations.CountAsync());
+    }
+
+    /// <summary>
+    /// Tracking a coordinate we know keeps the name on file, as it always has. Renaming is the
+    /// deliberate way to change it — that is what makes keeping the rule safe (ADR-0004).
+    /// </summary>
+    [Fact]
+    public async Task Tracking_under_another_name_still_keeps_the_name_on_file_after_a_rename()
+    {
+        var location = (await TrackAsync("Oslo", 59.9139m, 10.7522m, 23)).Location;
+        await Tracking.RenameAsync(location.Id, "Home");
+
+        var again = await TrackAsync("Oslo sentrum", 59.9139m, 10.7522m, 23);
+
+        Assert.Equal("Home", again.Location.Name);
+        Assert.Equal(1, await _db.Locations.CountAsync());
+    }
+
+    [Fact]
+    public async Task Renaming_an_id_we_do_not_know_is_not_a_silent_no_op()
+    {
+        await TrackAsync("Oslo", 59.9139m, 10.7522m, 23);
+
+        Assert.Null(await Tracking.RenameAsync(4242, "Home"));
+    }
+
     private async Task<TrackedLocation> TrackAsync(string name, decimal latitude, decimal longitude, int altitude)
     {
         var described = new TrackLocationRequest(name, latitude, longitude, altitude).Describe();

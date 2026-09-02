@@ -75,5 +75,61 @@ public class TrackLocationRequestTests
         Assert.Contains("Altitude", described.Errors.Keys);
     }
 
+    /* ---- The same name rule, read through a rename ---- */
+
+    /// <summary>
+    /// A rename carries a name and nothing else, and the name rule is the tracking one called
+    /// rather than restated. These assert it is genuinely the same rule, so it cannot drift.
+    /// </summary>
+    [Fact]
+    public void Reads_a_new_name_someone_typed()
+    {
+        var described = new RenameLocationRequest("  Oslo sentrum  ").Describe();
+
+        Assert.Empty(described.Errors);
+        Assert.Equal("Oslo sentrum", described.Name);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Refuses_a_rename_to_nothing(string? typed)
+    {
+        var described = new RenameLocationRequest(typed).Describe();
+
+        Assert.Null(described.Name);
+        Assert.Contains("Name", described.Errors.Keys);
+    }
+
+    [Fact]
+    public void Refuses_a_name_longer_than_the_column_holds()
+    {
+        var overlong = new string('a', TrackLocationRequest.LongestName + 1);
+
+        Assert.Contains("Name", new RenameLocationRequest(overlong).Describe().Errors.Keys);
+        Assert.Contains("Name", Describe(new TrackLocationRequest(overlong, 59.9139m, 10.7522m, 23)).Errors.Keys);
+    }
+
+    /// <summary>The longest name the column holds is a name, not a typo — on both routes.</summary>
+    [Fact]
+    public void Accepts_a_name_exactly_as_long_as_the_column_holds()
+    {
+        var longest = new string('a', TrackLocationRequest.LongestName);
+
+        Assert.Equal(longest, new RenameLocationRequest(longest).Describe().Name);
+        Assert.Equal(longest, Describe(new TrackLocationRequest(longest, 59.9139m, 10.7522m, 23)).Location!.Name);
+    }
+
+    /// <summary>Both routes say the same thing about the same bad name, because it is one rule.</summary>
+    [Fact]
+    public void Says_the_same_thing_about_a_bad_name_however_it_arrives()
+    {
+        var renaming = new RenameLocationRequest("  ").Describe().Errors["Name"];
+        var tracking = Describe(new TrackLocationRequest("  ", 59.9139m, 10.7522m, 23)).Errors["Name"];
+
+        Assert.Equal(tracking, renaming);
+    }
+
     private static LocationDescription Describe(TrackLocationRequest request) => request.Describe();
 }

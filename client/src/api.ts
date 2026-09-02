@@ -198,3 +198,24 @@ export async function searchMatches(query: string, signal?: AbortSignal): Promis
 
   return (await response.json()) as Match[]
 }
+
+/**
+ * Gives a Location we know a different label. Nothing else about it moves — not the coordinate
+ * that identifies it, not the altitude, not whether it is tracked, and no Forecast Snapshot, which
+ * stores a coordinate and no name at all. Two Locations may share a name; the coordinate keeps
+ * them apart. `rename` rather than a PATCH, for the reason the other writes are `track` and
+ * `untrack`: the route says what the domain says.
+ */
+export async function renameLocation(id: number, name: string): Promise<KnownLocation> {
+  const response = await fetch(`/api/locations/${id}/rename`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+
+  if (!response.ok) {
+    throw await refusal(response)
+  }
+
+  return (await response.json()) as KnownLocation
+}

@@ -4,9 +4,10 @@ using WeatherCompare.Api.Storage;
 namespace WeatherCompare.Api.Locations;
 
 /// <summary>
-/// Tracking and untracking: the two writes anyone makes to <c>locations</c>. Both are flag
-/// changes on a row that already exists, except the one case where a coordinate is genuinely
-/// new. Nothing here deletes anything, and no Forecast Snapshot is touched either way (ADR-0003).
+/// Tracking, untracking and renaming: the writes anyone makes to <c>locations</c>. All of them
+/// are field changes on a row that already exists, except the one case where a coordinate is
+/// genuinely new. Nothing here deletes anything, and no Forecast Snapshot is touched by any of
+/// them (ADR-0003).
 /// </summary>
 public sealed class LocationTracking(WeatherDbContext db, ILogger<LocationTracking> logger)
 {
@@ -49,6 +50,44 @@ public sealed class LocationTracking(WeatherDbContext db, ILogger<LocationTracki
                 tracked ? "Tracked" : "Untracked",
                 location.Id,
                 location.Name);
+        }
+
+        return location;
+    }
+
+    /// <summary>
+    /// Gives a Location we know a different label. Returns null when no Location has that id, so
+    /// the caller can say so rather than silently doing nothing. Only the name moves: not the
+    /// coordinate that identifies it, not the altitude, not the tracked flag — an untracked
+    /// Location is renamed the same way a tracked one is — and no Forecast Snapshot, which stores
+    /// a coordinate and no name at all. Two Locations are allowed to share a name; the coordinate
+    /// is what keeps them apart (ADR-0004).
+    /// </summary>
+    public async Task<Location?> RenameAsync(
+        long id,
+        string name,
+        CancellationToken cancellationToken = default)
+    {
+        var location = await db.Locations.SingleOrDefaultAsync(l => l.Id == id, cancellationToken);
+
+        if (location is null)
+        {
+            return null;
+        }
+
+        if (location.Name != name)
+        {
+            var was = location.Name;
+            location.Name = name;
+            await db.SaveChangesAsync(cancellationToken);
+
+            logger.LogInformation(
+                "Renamed Location {Id} from '{Was}' to '{Name}'; it is the same Location at ({Latitude}, {Longitude})",
+                location.Id,
+                was,
+                location.Name,
+                location.Latitude,
+                location.Longitude);
         }
 
         return location;

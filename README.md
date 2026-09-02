@@ -11,10 +11,12 @@ Running locally. The backend polls, stores and serves; the page renders.
 
 - A card per tracked Location, click through to the full forecast timeline.
 - Locations are tracked and untracked from the page; the Catalogue lives in Postgres.
+- A Location can be renamed, tracked or not. The name is only a label — the coordinate is
+  what identifies it, so a rename touches no Forecast Snapshot.
 - A Location can be found by name: searching offers **Matches**, and picking one fills the
   track form. Typing a coordinate by hand still works, and is the route that needs no network.
 - Snapshot history shows how the forecast for a given hour moved between Snapshots.
-- 105 tests. CI builds and tests the API and the client on every push and pull request.
+- 118 tests. CI builds and tests the API and the client on every push and pull request.
 
 MET Norway is still the only Provider, so nothing is compared against anything yet.
 

@@ -9,7 +9,7 @@ An organisation that publishes weather predictions, identified by name (e.g. MET
 _Avoid_: API, service, source, backend
 
 **Location**:
-A point on earth we track weather for, identified by its coordinate at the precision the Provider accepts. Its name is a human label we attach for display — two Locations with the same coordinate are the same Location regardless of what they are called.
+A point on earth we track weather for, identified by its coordinate at the precision the Provider accepts. Its name is a human label we attach for display — two Locations with the same coordinate are the same Location regardless of what they are called, and renaming one changes nothing about which Location it is.
 _Avoid_: place, city, station, position
 
 **Catalogue**:
@@ -39,6 +39,8 @@ _Avoid_: timestamp, created, date
 **Observation** — what the weather *actually was*, as opposed to what was forecast. Deliberately not a term in this context yet, because nothing produces one. If forecast-accuracy scoring ever comes in scope, this is the term to introduce, and it must not be conflated with **Forecast**.
 
 **Nearest station** — not a concept here. Locationforecast is grid-based: it answers for *any* coordinate, so there is no set of available points to be closest to. Nearest-station matching belongs to observation services (MET's Frost), which are out of scope. Do not let "find the closest location" re-enter the design.
+
+**Match** — what a name search offers: a candidate coordinate from a gazetteer, carrying a name and an elevation. A Match is not a **Location** and does not become one by being shown; it becomes one only if it is tracked, and most Matches are discarded unlooked-at. Do not call a Match a place, and do not model it as a Location that happens not to be tracked yet — an untracked Location is a different thing entirely, one we have history for.
 
 **Canonical vocabulary is one Provider's** — **Symbol** uses MET Norway's names for every Provider. A deliberate shortcut, not a principle (see ADR-0002). If a Provider's conditions will not map into MET's set, that is the trigger to introduce a neutral vocabulary.
 

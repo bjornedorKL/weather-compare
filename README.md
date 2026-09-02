@@ -15,8 +15,10 @@ Running locally. The backend polls, stores and serves; the page renders.
   what identifies it, so a rename touches no Forecast Snapshot.
 - A Location can be found by name: searching offers **Matches**, and picking one fills the
   track form. Typing a coordinate by hand still works, and is the route that needs no network.
+- The browser can say where you are, which fills the coordinate and looks the altitude up in an
+  elevation model — for the Locations no gazetteer has a name for. It leaves the name to you.
 - Snapshot history shows how the forecast for a given hour moved between Snapshots.
-- 118 tests. CI builds and tests the API and the client on every push and pull request.
+- 128 tests. CI builds and tests the API and the client on every push and pull request.
 
 MET Norway is still the only Provider, so nothing is compared against anything yet.
 
@@ -43,3 +45,7 @@ Weather data from [MET Norway](https://api.met.no/), licensed
 Location search by [Open-Meteo](https://open-meteo.com/en/docs/geocoding-api), over the
 [GeoNames](https://www.geonames.org/) gazetteer — both licensed
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+Altitude for a coordinate from [Open-Meteo's elevation API](https://open-meteo.com/en/docs/elevation-api),
+over the [Copernicus DEM](https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model)
+GLO-90 elevation model.

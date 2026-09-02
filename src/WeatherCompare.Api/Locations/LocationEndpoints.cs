@@ -10,9 +10,10 @@ namespace WeatherCompare.Api.Locations;
 /// which is a different question from "everything we know".
 /// </para>
 /// <para>
-/// <c>GET /api/locations/search</c> is the exception to all of that: a read that creates nothing
-/// and returns Matches, not Locations. It sits here because it is what fills the track form, and
-/// it is named for what it hands back rather than borrowing the Catalogue's words (ADR-0004).
+/// <c>GET /api/locations/search</c> and <c>GET /api/locations/elevation</c> are the exception to
+/// all of that: reads that create nothing and hand back a Match or a height, not a Location. They
+/// sit here because they are what fills the track form, and they are named for what they answer
+/// rather than borrowing the Catalogue's words (ADR-0004).
 /// </para>
 /// </summary>
 public static class LocationEndpoints
@@ -64,6 +65,11 @@ public static class LocationEndpoints
             .MapGet("/search", SearchForMatchesAsync)
             .WithName("SearchLocations")
             .WithSummary("Candidate coordinates for a name. Returns Matches, and tracks nothing.");
+
+        locations
+            .MapGet("/elevation", LookUpElevationAsync)
+            .WithName("LookUpElevation")
+            .WithSummary("Metres above sea level at a coordinate. Returns a height, and tracks nothing.");
 
         return endpoints;
     }
@@ -174,6 +180,56 @@ public static class LocationEndpoints
                 detail: $"Searching for “{name}” failed: {failure}. A coordinate can still be typed by hand.",
                 statusCode: StatusCodes.Status502BadGateway)
             : Results.Ok(search.Matches);
+    }
+
+    /// <summary>
+    /// The height at a coordinate, for the route where the browser says where you are and nothing
+    /// else that can be used: the reading it offers as an altitude is height above the ellipsoid,
+    /// so it is looked up here instead (ADR-0004). 502 when the model could not answer, for the
+    /// same reason a failed search is one — the failure is someone else's, and the altitude can
+    /// still be typed, so nothing about tracking is blocked by it.
+    /// <para>
+    /// A read that creates nothing, like the search beside it. It hands back a height, not a
+    /// Location: pressing <em>Track this Location</em> is still a separate act.
+    /// </para>
+    /// </summary>
+    private static async Task<IResult> LookUpElevationAsync(
+        decimal? latitude,
+        decimal? longitude,
+        OpenMeteoElevation elevation,
+        CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+
+        Check(latitude, nameof(latitude), 90m, errors);
+        Check(longitude, nameof(longitude), 180m, errors);
+
+        if (errors.Count > 0)
+        {
+            return Results.ValidationProblem(errors, title: "That is not a coordinate we can measure.");
+        }
+
+        var lookup = await elevation.AtAsync(latitude!.Value, longitude!.Value, cancellationToken);
+
+        return lookup.Metres is { } metres
+            ? Results.Ok(new CoordinateElevation(metres))
+            : Results.Problem(
+                title: "The elevation lookup is unavailable.",
+                detail: $"Looking up the height at ({latitude}, {longitude}) failed: {lookup.Failure}."
+                    + " The altitude can still be typed by hand.",
+                statusCode: StatusCodes.Status502BadGateway);
+
+        static void Check(decimal? value, string field, decimal limit, Dictionary<string, string[]> errors)
+        {
+            if (value is not { } degrees)
+            {
+                errors[field] = [$"Give a {field} in degrees."];
+            }
+            else if (degrees < -limit || degrees > limit)
+            {
+                errors[field] = [$"{degrees} is outside -{limit}..{limit} degrees."];
+            }
+        }
     }
 }
 

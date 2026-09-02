@@ -14,8 +14,12 @@ public sealed record Location
     /// </summary>
     public long Id { get; init; }
 
-    /// <summary>Human label for display. Not part of the Location's identity.</summary>
-    public required string Name { get; init; }
+    /// <summary>
+    /// Human label for display. Not part of the Location's identity, which is why it is settable:
+    /// renaming a Location changes nothing about which Location it is (CONTEXT.md), and is a
+    /// deliberate act of its own rather than a side effect of tracking (ADR-0004).
+    /// </summary>
+    public required string Name { get; set; }
 
     /// <summary>Latitude in degrees, at most four decimals.</summary>
     public required decimal Latitude { get; init; }

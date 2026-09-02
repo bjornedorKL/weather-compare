@@ -35,7 +35,7 @@ public sealed record TrackLocationRequest(
     {
         var errors = new Dictionary<string, string[]>();
 
-        var name = ReadName(errors);
+        var name = ReadName(Name, errors);
         var latitude = ReadCoordinate(Latitude, nameof(Latitude), -90m, 90m, errors);
         var longitude = ReadCoordinate(Longitude, nameof(Longitude), -180m, 180m, errors);
         var altitude = ReadAltitude(errors);
@@ -56,9 +56,14 @@ public sealed record TrackLocationRequest(
             errors);
     }
 
-    private string? ReadName(Dictionary<string, string[]> errors)
+    /// <summary>
+    /// The name rule, shared rather than restated: what is left after trimming, non-empty and no
+    /// longer than the column holds. <see cref="RenameLocationRequest"/> calls this, so a name a
+    /// Location can be tracked under is exactly a name it can be renamed to.
+    /// </summary>
+    public static string? ReadName(string? typed, Dictionary<string, string[]> errors)
     {
-        var name = Name?.Trim();
+        var name = typed?.Trim();
 
         if (string.IsNullOrEmpty(name))
         {

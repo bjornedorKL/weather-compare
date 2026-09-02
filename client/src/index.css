@@ -1,6 +1,7 @@
 @import './detail.css';
 @import './history.css';
 @import './track.css';
+@import './rename.css';
 
 :root {
   --ink: #17212b;

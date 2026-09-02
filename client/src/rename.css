@@ -1,0 +1,205 @@
+/**
+ * Renaming a Location: the control on a card, the form that replaces the card's heading while a
+ * name is being edited, and the panel that renames the ones we know but do not track. Its own
+ * stylesheet rather than track.css's, because renaming is neither joining nor leaving the
+ * Catalogue — it changes a label and nothing else.
+ */
+
+/* ---- The controls on a card ---- */
+
+/* The card is one big click target: `.card__open::after` stretches over it at z-index 1. Both
+   controls live above that surface, in the hole punched in it, so a click here acts on the
+   Location instead of opening it. */
+.card__controls {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.35rem;
+}
+
+.card__rename {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.card__rename:hover:not(:disabled) {
+  border-color: var(--wet);
+  color: var(--wet);
+}
+
+.card__rename:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* While a rename is open it is the whole header, so it gets the width to be typed in. */
+.card__header--renaming {
+  display: block;
+}
+
+/* ---- The form itself ---- */
+
+.rename__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+/* The field takes a line of its own and the two buttons sit under it: a card is narrow enough
+   that laying them out side by side wraps anyway, and wraps differently at every card width. */
+.rename__field {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  font-size: 0.78rem;
+}
+
+.rename__label {
+  color: var(--ink-muted);
+}
+
+.rename__input {
+  width: 100%;
+  min-width: 9rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: var(--ground);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.rename__input:focus-visible {
+  outline: 2px solid var(--wet);
+  outline-offset: 1px;
+}
+
+.rename__save,
+.rename__cancel {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.rename__save {
+  border-color: var(--wet);
+  color: var(--wet);
+  font-weight: 600;
+}
+
+.rename__save:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--wet) 12%, transparent);
+}
+
+.rename__save:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rename__cancel:hover {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+
+/* ---- The panel for the ones we do not track ---- */
+
+.rename {
+  margin-bottom: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+.rename__summary {
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rename__section {
+  padding: 0 0.9rem 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.rename__note {
+  margin: 0.8rem 0 0.6rem;
+  max-width: 46rem;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.rename__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rename__item {
+  min-width: 0;
+}
+
+/* In the list a form stands where its Location's name stood, so it takes about the width of one
+   of these chips rather than stretching the row it is in. */
+.rename__list .rename__form {
+  width: 14rem;
+}
+
+.rename__pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rename__pick:hover:not(:disabled) {
+  border-color: var(--wet);
+}
+
+.rename__pick:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rename__pick-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.rename__pick-coordinate {
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}

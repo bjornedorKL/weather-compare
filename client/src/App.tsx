@@ -3,6 +3,7 @@ import { useCatalogue } from './catalogue.ts'
 import { locationKey } from './forecasts.ts'
 import { LocationCard } from './LocationCard.tsx'
 import { LocationDetail } from './LocationDetail.tsx'
+import { RenameUntracked } from './RenameLocation.tsx'
 import { TrackLocation } from './TrackLocation.tsx'
 
 /**
@@ -67,6 +68,10 @@ export default function App() {
             untracked={untracked}
           />
         )}
+        {/* A tracked Location is renamed from its card; these have no card to be renamed from. */}
+        {opened === null && (
+          <RenameUntracked busy={busy} onRename={catalogue.rename} untracked={untracked} />
+        )}
         {notice !== null && opened === null && (
           <p
             className={`page__notice${notice.tone === 'problem' ? ' page__notice--problem' : ''}`}
@@ -87,6 +92,7 @@ export default function App() {
                   location={location}
                   now={now}
                   onOpen={() => setOpenedKey(locationKey(location))}
+                  onRename={id === null ? null : (name) => catalogue.rename(id, name)}
                   onUntrack={id === null ? null : () => catalogue.untrack(id)}
                 />
               )

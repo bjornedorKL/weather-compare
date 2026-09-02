@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { KnownLocation, LocationForecasts, TypedLocation } from './api.ts'
-import { WriteRefused, fetchKnownLocations, fetchLocations, setTracked, trackCoordinate } from './api.ts'
+import {
+  WriteRefused,
+  fetchKnownLocations,
+  fetchLocations,
+  renameLocation,
+  setTracked,
+  trackCoordinate,
+} from './api.ts'
 import { locationKey } from './forecasts.ts'
 
 /** Something the page has to tell the reader after a write, and whether it went well. */
@@ -10,7 +17,7 @@ export type Notice = {
 }
 
 /**
- * The Catalogue as the page holds it: the two reads it needs, and the three writes it offers.
+ * The Catalogue as the page holds it: the two reads it needs, and the four writes it offers.
  *
  * The reads are separate endpoints answering separate questions — `/api/locations` is the
  * Catalogue with its Forecasts, which is what the grid draws; `/api/locations/known` is every
@@ -39,6 +46,8 @@ export type Catalogue = {
   untrack: (id: number) => void
   trackKnown: (id: number) => void
   trackTyped: (typed: TypedLocation) => void
+  /** Gives a Location we know a different label. Changes nothing else about it. */
+  rename: (id: number, name: string) => void
 }
 
 /**
@@ -59,6 +68,18 @@ function trackingAgain(name: string): string {
   return (
     `Tracking ${name} again. New Forecast Snapshots resume at the next poll; the stretch it spent ` +
     'untracked stays a gap in its history.'
+  )
+}
+
+/**
+ * A rename is the one write that changes nothing about which Location it is, which is worth
+ * saying: the coordinate is what identifies a Location, so the Forecast Snapshots recorded under
+ * the old name are the same Location's history, unchanged and still there (CONTEXT.md).
+ */
+function renamed(name: string): string {
+  return (
+    `Now shown as ${name}. It is the same Location — same coordinate, same Forecast Snapshots. ` +
+    'The name is only a label.'
   )
 }
 
@@ -161,6 +182,11 @@ export function useCatalogue(): Catalogue {
     [known, write],
   )
 
+  const rename = useCallback(
+    (id: number, name: string) => write(async () => renamed((await renameLocation(id, name)).name)),
+    [write],
+  )
+
   const idOf = useCallback(
     (location: LocationForecasts) => {
       const key = locationKey(location)
@@ -181,5 +207,6 @@ export function useCatalogue(): Catalogue {
     untrack,
     trackKnown,
     trackTyped,
+    rename,
   }
 }

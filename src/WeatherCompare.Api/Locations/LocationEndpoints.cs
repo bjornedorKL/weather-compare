@@ -1,9 +1,10 @@
 namespace WeatherCompare.Api.Locations;
 
 /// <summary>
-/// The write path over the Catalogue. The verbs are the domain's own — a Location is tracked and
-/// untracked, never added and deleted — so the routes say <c>track</c> and <c>untrack</c> rather
-/// than leaning on DELETE, which would promise a removal this store cannot and must not perform.
+/// The write path over the Catalogue. The verbs are the domain's own — a Location is tracked,
+/// untracked and renamed, never added and deleted — so the routes say <c>track</c>, <c>untrack</c>
+/// and <c>rename</c> rather than leaning on DELETE, which would promise a removal this store
+/// cannot and must not perform, or on PATCH, which says nothing about which fields may move.
 /// <para>
 /// <c>GET /api/locations</c> is left exactly as it is: it answers "the Catalogue, with Forecasts",
 /// which is a different question from "everything we know".
@@ -55,6 +56,11 @@ public static class LocationEndpoints
             .WithSummary("Takes a Location out of the Catalogue. The row survives and no Snapshot is touched.");
 
         locations
+            .MapPost("/{id:long}/rename", RenameAsync)
+            .WithName("RenameLocation")
+            .WithSummary("Gives a Location we know a different label. Nothing else about it moves.");
+
+        locations
             .MapGet("/search", SearchForMatchesAsync)
             .WithName("SearchLocations")
             .WithSummary("Candidate coordinates for a name. Returns Matches, and tracks nothing.");
@@ -87,6 +93,36 @@ public static class LocationEndpoints
         return tracked.Created
             ? Results.Json(body, statusCode: StatusCodes.Status201Created)
             : Results.Ok(body);
+    }
+
+    /// <summary>
+    /// Renames any Location we know, tracked or not — the untracked ones are on the page too. The
+    /// name is validated exactly as tracking validates it, and a name another Location already
+    /// carries is accepted: the coordinate is identity, the name is a label (CONTEXT.md).
+    /// </summary>
+    private static async Task<IResult> RenameAsync(
+        long id,
+        RenameLocationRequest request,
+        LocationTracking tracking,
+        CancellationToken cancellationToken)
+    {
+        var described = request.Describe();
+
+        if (described.Name is not { } name)
+        {
+            return Results.ValidationProblem(
+                described.Errors,
+                title: "That is not a name we can show a Location by.");
+        }
+
+        var renamed = await tracking.RenameAsync(id, name, cancellationToken);
+
+        return renamed is null
+            ? Results.Problem(
+                title: "No such Location.",
+                detail: $"Nothing we know has id {id}.",
+                statusCode: StatusCodes.Status404NotFound)
+            : Results.Ok(KnownLocation.Of(renamed));
     }
 
     private static async Task<IResult> SetTrackedAsync(

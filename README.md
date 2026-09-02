@@ -18,7 +18,7 @@ Running locally. The backend polls, stores and serves; the page renders.
 - The browser can say where you are, which fills the coordinate and looks the altitude up in an
   elevation model — for the Locations no gazetteer has a name for. It leaves the name to you.
 - Snapshot history shows how the forecast for a given hour moved between Snapshots.
-- 128 tests. CI builds and tests the API and the client on every push and pull request.
+- 131 tests. CI builds and tests the API and the client on every push and pull request.
 
 MET Norway is still the only Provider, so nothing is compared against anything yet.
 

@@ -85,14 +85,16 @@ public sealed class OpenMeteoGazetteer(
     }
 
     /// <summary>
-    /// A result without a name or without an elevation is dropped rather than patched up. Altitude
-    /// is load-bearing for the temperature forecast (ADR-0004), so filling in a zero for a result
-    /// the gazetteer had no height for would be a quiet lie; Open-Meteo carries one on every
-    /// result, so this drops nothing in practice.
+    /// A result without a name, or without an altitude we can use, is dropped rather than patched
+    /// up. Altitude is load-bearing for the temperature forecast (ADR-0004), so standing a number
+    /// in for a height the gazetteer does not have would be a quiet lie — a zero where the field
+    /// is absent, or the field's own contents where they are not a height at all. A Match nobody
+    /// can use is better absent than present-and-wrong, and typing the coordinate by hand stays
+    /// the route for a place the gazetteer cannot describe.
     /// </summary>
     private static Match? AsMatch(GazetteerResult result)
     {
-        if (string.IsNullOrWhiteSpace(result.Name) || result.Elevation is not { } elevation)
+        if (string.IsNullOrWhiteSpace(result.Name) || Altitude(result.Elevation) is not { } elevation)
         {
             return null;
         }
@@ -107,6 +109,21 @@ public sealed class OpenMeteoGazetteer(
             result.Latitude,
             result.Longitude);
     }
+
+    /// <summary>
+    /// The altitude a Match can carry, or nothing at all: one field, one rule. An absent elevation
+    /// and an impossible one are the same answer — the gazetteer has no height for this place —
+    /// and reading them as one is what keeps the second from arriving through the door the first
+    /// is watched at. GeoNames, which this gazetteer serves, says "we do not know" with 9999, a
+    /// number the code would otherwise accept and hand on as a Location ten kilometres in the air.
+    /// <para>
+    /// Possible is -500 m to 9000 m. Below: the Dead Sea shore is around -430 m and is the lowest
+    /// land there is. Above: Everest is 8849 m. Both with room to spare, so the range turns away
+    /// the sentinel and anything else that is not a height without turning away anywhere a
+    /// forecast could be wanted.
+    /// </para>
+    /// </summary>
+    private static double? Altitude(double? elevation) => elevation is >= -500 and <= 9000 ? elevation : null;
 
     private static bool Blank(string? value) => string.IsNullOrWhiteSpace(value);
 

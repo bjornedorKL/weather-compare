@@ -125,6 +125,67 @@ public class OpenMeteoGazetteerTests
         Assert.Equal(1222, match.Elevation);
     }
 
+    /// <summary>
+    /// GeoNames' "we do not know" marker, which arrives as a number rather than as an absent
+    /// field. Open-Meteo's own answer for "finnset": the same name twice, once with a height.
+    /// </summary>
+    [Fact]
+    public async Task Drops_a_result_whose_elevation_is_the_gazetteers_marker_for_no_data()
+    {
+        var stub = StubHttpMessageHandler.Answering(
+            HttpStatusCode.OK,
+            """
+            {"results":[
+              {"name":"Finnset","latitude":69.4,"longitude":18.9,"elevation":203.0,"admin1":"Troms","country":"Norway"},
+              {"name":"Finnset","latitude":66.3,"longitude":13.8,"elevation":9999.0,"admin1":"Nordland","country":"Norway"}
+            ]}
+            """);
+
+        var search = await Gazetteer(stub).SearchAsync("finnset");
+
+        var match = Assert.Single(search.Matches);
+        Assert.Equal("Troms", match.Admin1);
+        Assert.Equal(203, match.Elevation);
+    }
+
+    /// <summary>The edges of the range are heights the earth has, so they are Matches.</summary>
+    [Fact]
+    public async Task Keeps_a_match_at_either_edge_of_a_possible_altitude()
+    {
+        var stub = StubHttpMessageHandler.Answering(
+            HttpStatusCode.OK,
+            """
+            {"results":[
+              {"name":"Deep","latitude":31.5,"longitude":35.5,"elevation":-500.0},
+              {"name":"High","latitude":28.0,"longitude":86.9,"elevation":9000.0}
+            ]}
+            """);
+
+        var search = await Gazetteer(stub).SearchAsync("edges");
+
+        Assert.Equal([-500, 9000], search.Matches.Select(m => m.Elevation));
+    }
+
+    /// <summary>A metre past either edge is not a lower-quality altitude; it is not an altitude.</summary>
+    [Fact]
+    public async Task Drops_a_result_whose_elevation_is_outside_what_the_earth_has()
+    {
+        var stub = StubHttpMessageHandler.Answering(
+            HttpStatusCode.OK,
+            """
+            {"results":[
+              {"name":"Too deep","latitude":31.5,"longitude":35.5,"elevation":-501.0},
+              {"name":"Too high","latitude":28.0,"longitude":86.9,"elevation":9001.0},
+              {"name":"Finse","latitude":60.6,"longitude":7.5,"elevation":1222.0,"country":"Norway"}
+            ]}
+            """);
+
+        var search = await Gazetteer(stub).SearchAsync("outside");
+
+        var match = Assert.Single(search.Matches);
+        Assert.Equal("Finse", match.Name);
+    }
+
     /// <summary>A gazetteer result need not say what region or country it is in; a Match says so too.</summary>
     [Fact]
     public async Task Keeps_a_match_that_has_no_region_or_country()

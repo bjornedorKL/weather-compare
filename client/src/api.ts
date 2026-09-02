@@ -123,6 +123,45 @@ async function refusal(response: Response): Promise<WriteRefused> {
   return new WriteRefused(message === '' ? `The API answered ${response.status}.` : message, fields)
 }
 
+/**
+ * A read whose failure a reader is shown as prose, so what it throws has to read as a sentence.
+ * Two things can go wrong here and they are different failures, and only one of them arrives with
+ * words of its own worth repeating.
+ *
+ * An answer, however bad, explains itself in problem details: the page says what the API said
+ * rather than guessing at a wording that would drift from what the API actually enforces, which
+ * is why a 502 from the gazetteer already reads as a sentence and keeps doing so.
+ *
+ * A rejected `fetch` sent no answer at all, so there are no problem details to read and the only
+ * message on the `TypeError` is the browser's own — Chrome says `Failed to fetch`, which is
+ * neither a sentence nor ours. That one gets ours: what could not be reached, ending in a full
+ * stop, so the sentence the page writes after it about what to do next starts cleanly.
+ *
+ * `what` names the lookup because a reader is looking at one of them, not at "the API"; the
+ * distinction itself lives here rather than at the call sites so that it exists once.
+ */
+async function lookedUp(what: string, url: string, signal?: AbortSignal): Promise<Response> {
+  let response: Response
+
+  try {
+    response = await fetch(url, { signal })
+  } catch (error) {
+    /* An abort is not a failure to reach anything — it was asked for — so it travels on as it is
+       rather than becoming a sentence nobody should be shown. */
+    if (signal?.aborted) {
+      throw error
+    }
+
+    throw new Error(`The ${what} could not be reached.`)
+  }
+
+  if (!response.ok) {
+    throw new Error((await refusal(response)).message)
+  }
+
+  return response
+}
+
 export async function fetchKnownLocations(signal?: AbortSignal): Promise<KnownLocation[]> {
   const response = await fetch('/api/locations/known', { signal })
 
@@ -186,15 +225,13 @@ export type Match = {
 /**
  * Matches for a name. An empty array is a search that ran and found nothing; a throw is a search
  * that could not run, which the page reports as such because typing a coordinate still works.
- * The error is a plain one, not a `WriteRefused` — nothing was written to refuse — but it is
- * worded from the same problem details, so the page still repeats what the API said.
+ * The error is a plain one, not a `WriteRefused` — nothing was written to refuse — and it is
+ * worded by `lookedUp`: the API's own problem details when it answered, our own sentence when it
+ * could not be reached at all.
  */
 export async function searchMatches(query: string, signal?: AbortSignal): Promise<Match[]> {
-  const response = await fetch(`/api/locations/search?q=${encodeURIComponent(query)}`, { signal })
-
-  if (!response.ok) {
-    throw new Error((await refusal(response)).message)
-  }
+  const url = `/api/locations/search?q=${encodeURIComponent(query)}`
+  const response = await lookedUp('name search', url, signal)
 
   return (await response.json()) as Match[]
 }
@@ -226,8 +263,9 @@ export async function renameLocation(id: number, name: string): Promise<KnownLoc
  * browser located, because the altitude the browser itself offers is height above the WGS84
  * ellipsoid: tens of metres out, and null on any device positioning by wi-fi (ADR-0004).
  *
- * A throw is a lookup that could not run. It is deliberately not fatal to anything: the altitude
- * is a form field, so it can still be typed, and tracking is unaffected.
+ * A throw is a lookup that could not run, worded by `lookedUp` like a failed search is. It is
+ * deliberately not fatal to anything: the altitude is a form field, so it can still be typed, and
+ * tracking is unaffected.
  */
 export async function lookUpElevation(
   latitude: number,
@@ -235,11 +273,7 @@ export async function lookUpElevation(
   signal?: AbortSignal,
 ): Promise<number> {
   const where = `latitude=${latitude}&longitude=${longitude}`
-  const response = await fetch(`/api/locations/elevation?${where}`, { signal })
-
-  if (!response.ok) {
-    throw new Error((await refusal(response)).message)
-  }
+  const response = await lookedUp('elevation lookup', `/api/locations/elevation?${where}`, signal)
 
   return ((await response.json()) as { elevation: number }).elevation
 }

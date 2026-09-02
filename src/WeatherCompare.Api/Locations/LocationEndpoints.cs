@@ -8,6 +8,11 @@ namespace WeatherCompare.Api.Locations;
 /// <c>GET /api/locations</c> is left exactly as it is: it answers "the Catalogue, with Forecasts",
 /// which is a different question from "everything we know".
 /// </para>
+/// <para>
+/// <c>GET /api/locations/search</c> is the exception to all of that: a read that creates nothing
+/// and returns Matches, not Locations. It sits here because it is what fills the track form, and
+/// it is named for what it hands back rather than borrowing the Catalogue's words (ADR-0004).
+/// </para>
 /// </summary>
 public static class LocationEndpoints
 {
@@ -48,6 +53,11 @@ public static class LocationEndpoints
                 SetTrackedAsync(id, tracked: false, tracking, cancellationToken))
             .WithName("UntrackLocation")
             .WithSummary("Takes a Location out of the Catalogue. The row survives and no Snapshot is touched.");
+
+        locations
+            .MapGet("/search", SearchForMatchesAsync)
+            .WithName("SearchLocations")
+            .WithSummary("Candidate coordinates for a name. Returns Matches, and tracks nothing.");
 
         return endpoints;
     }
@@ -93,6 +103,41 @@ public static class LocationEndpoints
                 detail: $"Nothing we know has id {id}.",
                 statusCode: StatusCodes.Status404NotFound)
             : Results.Ok(KnownLocation.Of(location));
+    }
+
+    /// <summary>
+    /// Matches for a name, straight through to the page. 502 when the gazetteer could not answer,
+    /// because that is what it is — the failure is someone else's, and the page has a fallback for
+    /// it. An empty list is a search that ran and matched nothing, which is a 200.
+    /// <para>
+    /// A Match's coordinate goes out as the gazetteer gave it, unrounded. Tracking is what
+    /// truncates a coordinate to the four decimals Providers accept
+    /// (<see cref="TrackLocationRequest.Describe"/>), and doing it twice would put the rule in two
+    /// places for no gain.
+    /// </para>
+    /// </summary>
+    private static async Task<IResult> SearchForMatchesAsync(
+        string? q,
+        OpenMeteoGazetteer gazetteer,
+        CancellationToken cancellationToken)
+    {
+        var name = q?.Trim();
+
+        if (string.IsNullOrEmpty(name))
+        {
+            return Results.ValidationProblem(
+                new Dictionary<string, string[]> { ["q"] = ["Give a name to search for."] },
+                title: "That is not a name we can search for.");
+        }
+
+        var search = await gazetteer.SearchAsync(name, cancellationToken);
+
+        return search.Failure is { } failure
+            ? Results.Problem(
+                title: "The name search is unavailable.",
+                detail: $"Searching for “{name}” failed: {failure}. A coordinate can still be typed by hand.",
+                statusCode: StatusCodes.Status502BadGateway)
+            : Results.Ok(search.Matches);
     }
 }
 

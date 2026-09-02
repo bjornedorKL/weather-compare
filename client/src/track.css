@@ -126,6 +126,72 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Finding one by name ---- */
+
+/* The search sits above the four fields in the same section: one input and a button, on one
+   line where there is room. It is a separate <form> from the coordinate one below — forms do
+   not nest, and Enter in the search box must search rather than track. */
+.track__search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.track__search .field {
+  flex: 1 1 14rem;
+}
+
+.track__note--problem {
+  color: var(--accent);
+}
+
+.track__matches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.8rem;
+  padding: 0;
+  list-style: none;
+}
+
+/* Drawn like the known-but-untracked buttons, because it does the same kind of thing: one
+   click, no typing. It tracks nothing, though — it fills the form below. */
+.track__match {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.track__match:hover:not(:disabled) {
+  border-color: var(--wet);
+}
+
+.track__match:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.track__match-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.track__match-where {
+  color: var(--ink-faint);
+  font-size: 0.68rem;
+}
+
 /* ---- Describing a coordinate ---- */
 
 /* Wide enough for four fields side by side on a laptop, one per line on a phone. */

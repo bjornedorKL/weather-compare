@@ -166,3 +166,35 @@ export async function trackCoordinate(typed: TypedLocation): Promise<TrackedCoor
     created: response.status === 201,
   }
 }
+
+/**
+ * A candidate coordinate a name search offered — what `GET /api/locations/search?q=` returns.
+ * A Match is not a Location: nothing is stored when one is offered, and picking one only fills
+ * the track form, which is what turns it into a Location if it is then tracked (CONTEXT.md).
+ * `admin1` is the gazetteer's word for the first-level region; the page shows it as one.
+ */
+export type Match = {
+  name: string
+  admin1: string | null
+  country: string | null
+  /** Metres above sea level, from the gazetteer rather than from a person (ADR-0004). */
+  elevation: number
+  latitude: number
+  longitude: number
+}
+
+/**
+ * Matches for a name. An empty array is a search that ran and found nothing; a throw is a search
+ * that could not run, which the page reports as such because typing a coordinate still works.
+ * The error is a plain one, not a `WriteRefused` — nothing was written to refuse — but it is
+ * worded from the same problem details, so the page still repeats what the API said.
+ */
+export async function searchMatches(query: string, signal?: AbortSignal): Promise<Match[]> {
+  const response = await fetch(`/api/locations/search?q=${encodeURIComponent(query)}`, { signal })
+
+  if (!response.ok) {
+    throw new Error((await refusal(response)).message)
+  }
+
+  return (await response.json()) as Match[]
+}

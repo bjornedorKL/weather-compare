@@ -3,8 +3,12 @@ using WeatherCompare.Api.Providers;
 namespace WeatherCompare.Api.Locations;
 
 /// <summary>
-/// A Location as someone types it into the page: a coordinate, a human label and an altitude.
-/// Nothing here looks a place up — the coordinate is given, not found.
+/// A Location as the page submits it: a coordinate, a human label and an altitude. Nothing here
+/// looks a name up. A coordinate can now be <em>found</em> — <c>GET /api/locations/search</c>
+/// offers Matches and the page fills these four fields from the one picked (ADR-0004) — but it
+/// arrives here as four numbers either way, and this type cannot tell a picked Match from a
+/// typed coordinate. Nothing records the difference: the coordinate is the fact, and how it was
+/// arrived at is not.
 /// </summary>
 public sealed record TrackLocationRequest(
     string? Name,

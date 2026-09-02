@@ -33,10 +33,17 @@
 - [docs/adr/](./docs/adr/) holds decisions and why they were made. A decision that closes off
   an alternative belongs here.
 
+## Workflow
+
+Work reaches `main` through a pull request — `main` is the default branch, and it is not
+protected, so nothing stops a direct push except this instruction.
+
+CI (`.github/workflows/ci.yml`) builds and tests the solution and lints the client on every
+pull request. Wait for it, then merge on green. Never merge on red, and never merge while
+checks are still running. Nothing merges by itself: no auto-merge is configured, so merging
+is always a deliberate step.
+
 ## Deployment
 
 There is none. Hosting is local only — the poller runs when this machine runs. Do not add
 deploy steps, hosting config, or cloud provider setup unless asked.
-
-CI (`.github/workflows/ci.yml`) builds and tests the solution and lints the client on every
-pull request to `main`, which is the default branch. Work goes to `main` through pull requests.

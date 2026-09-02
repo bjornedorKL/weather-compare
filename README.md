@@ -7,7 +7,14 @@ Built as a learning project for two things: driving GitHub through its MCP serve
 
 ## Status
 
-Design agreed, no code yet.
+Running locally. The backend polls, stores and serves; the page renders.
+
+- A card per tracked Location, click through to the full forecast timeline.
+- Locations are tracked and untracked from the page; the Catalogue lives in Postgres.
+- Snapshot history shows how the forecast for a given hour moved between Snapshots.
+- 96 tests. CI builds and tests the API and the client on every push and pull request.
+
+MET Norway is still the only Provider, so nothing is compared against anything yet.
 
 - [CONTEXT.md](./CONTEXT.md) — the domain language. Read this first.
 - [docs/adr/](./docs/adr/) — decisions and why they were made.
